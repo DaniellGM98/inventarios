@@ -1,0 +1,449 @@
+<?php 
+	include 'header.phtml';
+
+	if($_SESSION['usuario']->tipo == 3) {
+		header('Location: '.URL_ROOT.'/tienda');
+		exit;
+	}
+?>
+	<div class="row page-titles">
+		<div class="col-md-5 align-self-center">
+			<h3 class="text-themecolor"><i class="fa fa-cubes"></i> Productos</h3>
+		</div>
+		<div class="col-md-7 align-self-center">
+			<div class="form-inline pull-right">
+				<div class="btn-group dropleft">
+					<button type="button" class="btn btn-secondary btn-sm dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+						<i class="mdi mdi-chart-bubble"></i> Existencias
+					</button>
+					<div class="dropdown-menu">
+						<a class="dropdown-item" href="<?= URL_ROOT ?>/producto/stock/0" target="_blank"><i class="mdi mdi-chart-bubble"></i> Almacén</a>
+						<div class="dropdown-divider"></div>
+						<a class="dropdown-item" href="<?= URL_ROOT ?>/producto/stock/1" target="_blank"><i class="mdi mdi-chart-bubble"></i> Tiendita</a>
+						<a class="dropdown-item" href="<?= URL_ROOT ?>/producto/stock/2" target="_blank"><i class="mdi mdi-chart-bubble"></i> Comunidad</a>
+						<a class="dropdown-item" href="<?= URL_ROOT ?>/producto/stock/3" target="_blank"><i class="mdi mdi-chart-bubble"></i> Producción</a>
+					</div>
+				</div>
+				<a href="<?= URL_ROOT ?>/producto/stock/xlsx/" target="_blank" class="btn btn-sm btn-secondary m-l-10"><i class="mdi mdi-file-excel fa-lg"></i> Excel Alm Gral</a>
+			</div>
+		</div>
+	</div>
+	<div class="container-fluid">
+		<div class="row">
+			<div class="col-12">
+				<div class="card">
+					<div class="card-body">
+						<?php if(in_array(MOD_PRODUCTOS_ADD, $permisos)) : ?>
+						<button class="btn btn-success pull-right" id="btnAdd"><i class="mdi mdi-plus"></i> Agregar</button>
+						<?php endif; ?>
+
+						<h4 class="card-title">Productos</h4>
+						<h6 class="card-subtitle">Agrega, edita y da de baja productos</h6>
+
+						<!--div class="table-responsive">
+						</div-->
+						<table id="tbl-items" class="table table-hover table-striped table-sm w-100 mw-100">
+							<thead>
+								<tr>
+									<th>Descripción</th>
+									<th>Proveedor</th>
+									<th class="text-center">Peso</th>
+									<th class="text-right">Precio</th>
+									<th class="text-center">Código</th>
+									<th class="text-center">Present</th>
+									<th class="text-center">Tipo</th>
+									<th class="text-center">Stock</th>
+									<th class="text-center">Exist</th>
+									<th class="text-center">Tienda</th>
+									<th class="text-center">Comuni</th>
+									<th class="text-center">Produ</th>
+									<th class="text-center"></th>
+								</tr>
+							</thead>
+							<tbody></tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+		</div>
+		<?php if(in_array(MOD_PRODUCTOS_ADD, $permisos) || in_array(MOD_PRODUCTOS_EDIT, $permisos)) : ?>
+		<div id="frm-item" class="modal" >
+			<div class="modal-dialog modal-lg">
+				<div class="modal-content d-flex p-2">
+					<div class="modal-header">
+						<h3 class="modal-title">Datos del Producto</h3>
+					</div>
+					<div class="modal-body">
+						<form class="form p-t-20">
+							<div class="form-group">
+								<div class="row">
+									<div class="col-sm-6">
+										<label for="item-fk_proveedor">Proveedor</label>
+										<div class="input-group">
+											<div class="input-group-prepend">
+												<span class="input-group-text" id="basic-addon1">
+													<i class="mdi mdi-contacts"></i>
+												</span>
+											</div>
+											<select class="form-control" id="item-fk_proveedor">
+											<?php $proveedores = $todo->model->proveedor->getAll()->result; 
+												foreach($proveedores as $prov): ?>
+												<option value="<?= $prov->id_proveedor ?>"><?= $prov->nombre.' '.$prov->apellidos ?></option>
+											<?php endforeach; ?>
+											</select>
+										</div>
+									</div>
+									<div class="col-sm-6">
+										<label for="item-codigo_barras">Código de barras</label>
+										<div class="input-group">
+											<div class="input-group-prepend">
+												<span class="input-group-text" id="basic-addon1">
+													<i class="mdi mdi-barcode"></i>
+												</span>
+											</div>
+											<input type="text" class="form-control" id="item-codigo_barras" placeholder="Código de barras" required>
+										</div>
+									</div>
+								</div>
+							</div>
+							<div class="form-group">
+								<label for="item-descripcion">Descripción</label>
+								<div class="input-group">
+									<div class="input-group-prepend">
+										<span class="input-group-text" id="basic-addon1">
+											<i class="fa fa-cube"></i>
+										</span>
+									</div>
+									<input type="text" class="form-control" id="item-descripcion" placeholder="Nombre o descripción">
+								</div>
+							</div>
+							<div class="form-group">
+								<div class="row">
+									<div class="col-sm-6">
+										<label for="item-presentacion">Presentación</label>
+										<select class="form-control" id="item-presentacion">
+											<option value="1">Pieza</option>
+											<option value="2">Caja</option>
+											<option value="3">Bulto</option>
+										</select>
+									</div>
+									<div class="col-sm-6">
+										<label for="item-tipo">Tipo</label>
+										<select class="form-control" id="item-tipo">
+											<option value="1">Abarrotes</option>
+											<option value="2">Perecederos</option>
+										</select>
+									</div>
+								</div>
+							</div>
+							<div class="form-group">
+								<div class="row">
+									<div class="col-sm-6">
+										<label for="item-peso">Peso</label>
+										<div class="input-group">
+											<input type="number" class="form-control text-right" id="item-peso" placeholder="Peso (kg)" required>
+											<div class="input-group-append">
+												<span class="input-group-text">kg</span>
+											</div>
+										</div>
+									</div>
+									<div class="col-sm-6">
+										<label for="item-precio">Precio</label>
+										<div class="input-group">
+											<div class="input-group-prepend">
+												<span class="input-group-text">$</span>
+											</div>
+											<input type="number" class="form-control text-right" id="item-precio" placeholder="Precio" required>
+										</div>
+									</div>
+								</div>
+							</div>
+							<div class="form-group row" style="text-align:left;">
+								<div class="col-sm-6">
+									<input type="checkbox" class="form-control" id="item-esDespensa">
+									<label for="item-esDespensa" class="form-label">Paquete</label>
+								</div>
+							</div>	
+							<div class="form-group hide" id="paquete">
+								<div class="row">
+									<div class="col-sm-12">
+										<label for="item-peso">Contenido</label>
+										<div class="input-group">
+											<!-- <textarea name="item-contenido" id="item-contenido" rows="5" class="form-control" placeholder="1 KG Arroz&#10;1 KG Frijol&#10;1 Leche..."></textarea> -->
+											<textarea name="item-contenido" id="item-contenido" rows="5" class="form-control" placeholder="1 Kg Arroz, 1 Kg Frijol, 1 Leche..."></textarea>
+										</div>
+									</div>
+								</div>
+							</div>
+							<input type="hidden" id="item-id" value="0">
+						</form>
+					</div>
+					<div class="modal-footer d-flex justify-content-end">
+						<button type="submit" class="btn btn-inverse waves-effect waves-light m-r-20" data-dismiss="modal">Cancelar</button>
+						<button type="submit" class="btn btn-success waves-effect waves-light" id="btnSave">Guardar</button>
+					</div>
+				</div>
+			</div>
+		</div>
+		<?php endif; ?>
+	</div>
+	<?php include 'footer.phtml';?>
+	<script type="text/javascript">
+		$(function() {
+			$apiUrl = '<?= URL_API ?>producto/';
+			$('#mnu-prod').addClass('active');
+
+			document.getElementById('item-esDespensa').addEventListener('change', function() {
+				const paqueteDiv = document.getElementById('paquete');
+				if (this.checked) {
+					paqueteDiv.classList.remove('hide');
+				} else {
+					paqueteDiv.classList.add('hide');
+					document.getElementById('item-contenido').value = '';
+				}
+			});
+
+			getItems();
+			function getItems() { blockPage();
+				selectedColumns = $('#columns-tbl-items').val(); cleanTable('tbl-items'); $('#tbl-items tbody').empty();
+				createTable('tbl-items', true, selectedColumns); $.unblockUI();
+			}
+
+			function addItemRow(item) {
+				$('#tbl-items [data-id="'+item.id_producto+'"]').remove();
+				tr = $('<tr data-id="'+item.id_producto+'"></tr>').appendTo($('#tbl-items tbody'));
+				exist = parseFloat(item.peso) * parseFloat(item.stock);
+
+				tr.append('<td class="text-left"><small class="descripcion">'+item.descripcion+'</small></td>');
+				tr.append('<td class="text-left"><small class="proveedor">'+item.proveedor+'</small></td>');
+				tr.append('<td class="text-center"><small class="peso">'+item.peso+'</small></td>');
+				tr.append('<td class="text-right"><small class="precio">'+item.precio+'</small></td>');
+				tr.append('<td class="text-center"><small class="codigo_barras">'+item.codigo_barras+'</small></td>');
+				tr.append('<td class="text-center"><small class="presenta">'+item.presenta+'</small></td>');
+				tr.append('<td class="text-center"><small class="tipos">'+item.tipos+'</small></td>');
+				tr.append('<td class="text-center"><small class="stock">'+item.stock+'</small></td>');
+				tr.append('<td class="text-center"><small class="exist">'+exist.toFixed(3)+'</small></td>');
+				tr.append('<td class="text-center"><small class="stock_tiendita">'+item.stock_tiendita+'</small></td>');
+				tr.append('<td class="text-center"><small class="stock_comunidad">'+item.stock_comunidad+'</small></td>');
+				tr.append('<td class="text-center"><small class="stock_produccion">'+item.stock_produccion+'</small></td>');
+
+				tda = $('<td class="text-center"></td>').appendTo(tr);
+				acciones = $('<div></div>').appendTo(tda);
+				<?php if(in_array(MOD_PRODUCTOS_EDIT, $permisos)) : ?> acciones.append('<a href="#" data-popup="tooltip" title="Editar" class="btnEdit text-primary"><i class="mdi mdi-pencil fa-lg"></i></a> ');  <?php endif; ?>
+				<?php if(in_array(MOD_PRODUCTOS_DEL, $permisos)) : ?> acciones.append('<a href="#" data-popup="tooltip" title="Dar de baja" class="btnDel"><i class="mdi mdi-delete fa-lg" style="color:red;"></i></a>'); <?php endif; ?>
+			}
+
+			<?php if(in_array(MOD_PRODUCTOS_ADD, $permisos)) : ?>
+			$('#btnAdd').click(function(e) { e.preventDefault();
+				clearData();
+				$('#frm-item').modal('show');
+			});
+			<?php endif; ?>
+
+			<?php if(in_array(MOD_PRODUCTOS_EDIT, $permisos)) : ?>
+			$('tbody').on('click', '.btnEdit', function(event) { event.preventDefault(); blockPage();
+				clearData();
+				$('#frm-item .validation-error-label').remove();
+				id = $(this).parents('tr').data('id');
+				
+				$.get($apiUrl+'get/'+id, function(item) { item = item.result
+					$.each(item, function(index, val) { $('#item-'+index).val(val).trigger('change'); });
+					$('#item-id').val(item.id_producto);
+					const paqueteDiv = document.getElementById('paquete');
+					if(item.esDespensa==1){
+						document.getElementById("item-esDespensa").checked = true;
+						paqueteDiv.classList.remove('hide');
+					}else{
+						document.getElementById("item-esDespensa").checked = false;
+						paqueteDiv.classList.add('hide');
+					}
+					$('#frm-item').modal('show');
+					$.unblockUI();
+				});
+			});
+			<?php endif; ?>
+
+			<?php if(in_array(MOD_PRODUCTOS_DEL, $permisos)) : ?>
+			$('tbody').on('click', '.btnDel', function(event) { event.preventDefault(); 
+				id = $(this).parents('tr').data('id');
+				trp = $('#tbl-items tr[data-id="'+id+'"]');
+				nom = trp.find('.descripcion').text();
+				swal({ title:"Dar de baja producto", text:"Se dará de baja el producto <strong>"+nom+"</strong>", type:"warning", html:true, showCancelButton:true, cancelButtonText:"Cancelar", confirmButtonColor:"#DD6B55", confirmButtonText:"Si, eliminar", closeOnConfirm:false  }, 
+					function(resp) {
+						blockPage();
+						if(resp) {
+							$('#tbl-items tbody').empty();
+							$.ajax({ url:$apiUrl+'del/'+id, type:'PUT', dataType:'json',
+								success: function(resp) {
+									if(resp.response) {
+										selectedColumns = $('#columns-tbl-items').val(); cleanTable('tbl-items'); trp.remove(); createTable('tbl-items', true, selectedColumns);
+										swal({ type:"success", title:"¡Listo!", text:"Se eliminó el producto", timer:4000 });
+									} else { swal({ type:"warning", title:"Oops!", text:resp.message, timer:4000 });  }
+									$.unblockUI();
+								}
+							});
+						} else { $.unblockUI(); }
+					}
+				);
+			});
+			<?php endif; ?>
+
+			<?php if(in_array(MOD_PRODUCTOS_ADD, $permisos) || in_array(MOD_PRODUCTOS_EDIT, $permisos)) : ?>
+			$('#frm-item').on('shown.bs.modal', function () { $('#item-codigo_barras').focus(); });
+
+			$('#item-codigo_barras').change(function() {
+				$('.invalid-tooltip').remove();
+				if($.trim($(this).val()) != ''){
+					$.get($apiUrl+'findBy/codigo_barras/'+$.trim($(this).val()), function(producto) { 
+						if(producto.result.length > 0) { 
+							producto = producto.result;
+							if(producto.length>1 || producto[0].id_producto!=parseInt($('#item-id').val())) {
+								$errLabel = $('<div class="row invalid-tooltip">Ya existe un producto con el mismo código de barras</div>');
+								$('#item-codigo_barras').after($errLabel);
+								$errLabel.show();
+							}
+						}
+					}, 'json');
+				}
+			});
+
+			$('#btnSave').click(function() {
+				$('.invalid-tooltip').remove();
+				id = parseInt($('#item-id').val());
+				data = {};
+
+				$.each($('#frm-item').find('input, select, textarea'), function(index, elem) {
+					ide = $(elem).attr('id').replace('item-','');
+					data[ide] = $.trim($(elem).val());
+				});
+
+				data['esDespensa'] = $('#item-esDespensa').prop('checked') ? 1 : 0;
+				data['contenido'] = $('#item-esDespensa').prop('checked') ? data['contenido'] : '';
+
+				$errLabel = $('<div class="invalid-tooltip"></div>');
+				if(data.descripcion == '') {
+					$errLabel.html('Debe ingresar el descripcion');
+					$('#item-descripcion').focus().after($errLabel);
+					$errLabel.show();
+				} else if(data.codigo_barras == '') {
+					$errLabel.html('Debe ingresar el código de barras');
+					$('#item-codigo_barras').after($errLabel);
+					$errLabel.show();
+				} else {
+					blockPage();
+					if(id == 0) {
+						data.status = 1;
+						$.post($apiUrl+'add/', data, function(resp) {
+							if(resp.response) {
+								data.id_producto = resp.result;
+								selectedColumns = $('#columns-tbl-items').val(); cleanTable('tbl-items'); addItemRow(data); createTable('tbl-items', true, selectedColumns);
+								$('#item-id').val(0);
+								$('#frm-item').modal('hide');
+								swal({ type: "success", title: "¡Listo!", text: "Se guardaron los datos correctamente.", timer: 4000 });
+							} else { swal({ type: "warning", title: "Oops!", text: resp.message, timer: 4000 }); }
+							$.unblockUI();
+						},'json');
+					} else {
+						$.ajax({ url:$apiUrl+'edit/'+id, type:'PUT', dataType:'json', data:data, }).done(
+							function(resp) {
+								if(resp.response) {
+									$('#tbl-items').DataTable().draw();
+									$('#item-id').val(0);
+									$('#frm-item').modal('hide');
+									swal({ type: "success", title: "¡Listo!", text: "Se guardaron los datos correctamente.", timer: 4000 });
+								} else { swal({ type: "warning", title: "Oops!", text: resp.message, timer: 4000 }); }
+								$.unblockUI();
+							}
+						);
+					}
+				}
+			});
+
+			function clearData() {
+				$('.invalid-tooltip').remove();
+				$('#frm-item input, #frm-item textarea').val('');
+				document.getElementById("item-esDespensa").checked = false;
+				const paqueteDiv = document.getElementById('paquete');
+				paqueteDiv.classList.add('hide');
+				$('#item-id').val(0);
+			}
+			<?php endif; ?>
+
+			function cleanTable(tbl) {
+				if($.fn.dataTable.isDataTable('#'+tbl)) {
+					table = $('#'+tbl).DataTable();
+					table.destroy();
+				}
+				$("#nodata").remove();
+			}
+
+			function createTable(tbl, paging, arrColumns=null) {
+				container = $('<div class="form-inline pull-right" style="overflow: visible"></div>');
+				select = $('<select class="selectpicker" multiple data-selected-text-format="static" id="columns-'+tbl+'" title="Mostrar/Ocultar columnas" data-width="fit"></select>').appendTo(container);
+				select.append('<option class="form-control-sm" value="0">Descripción</option>');
+				select.append('<option class="form-control-sm" value="1">Proveedor</option>');
+				select.append('<option class="form-control-sm" value="2">Peso</option>');
+				select.append('<option class="form-control-sm" value="3">Precio</option>');
+				select.append('<option class="form-control-sm" value="4">Código barras</option>');
+				select.append('<option class="form-control-sm" value="5">Presentación</option>');
+				select.append('<option class="form-control-sm" value="6">Tipo</option>');
+				select.append('<option class="form-control-sm" value="7">Stock</option>');
+				select.append('<option class="form-control-sm" value="8">Existencias</option>');
+				select.append('<option class="form-control-sm" value="9">Tienda</option>');
+				select.append('<option class="form-control-sm" value="10">Comunidad</option>');
+				select.append('<option class="form-control-sm" value="11">Producción</option>');
+				select.selectpicker('val', arrColumns!=null? arrColumns: ['0', '1', '2', '3', '7', '8', '9', '10', '11']);
+				searchContainer = $('<div class="input-group"></div>').appendTo(container);
+				search = $('<input type="text" id="bus" placeholder="Buscar por nombre" class="form-control">').appendTo(searchContainer);
+				icon = $('<div class="input-group-append"></div>').appendTo(searchContainer);
+				icon.append('<button type="button" class="btn btn-secondary btn-sm" id="btn-bus"><i class="fa fa-search"></i></button>');
+
+				$('#'+tbl).dataTable({
+					// scrollY: false,
+					scrollX: false,
+					paging: paging,
+					pagingType: "full_numbers",
+					dom: 'Rl<"#toolbar-'+tbl+'">frtip',
+					"columnDefs": [
+						{"orderable": true, "targets": [0], "visible": ($.inArray("0", select.val())>=0), "className": '', "data": 'descripcion'},
+						{"orderable": true, "targets": [1], "visible": ($.inArray("1", select.val())>=0), "className": '', "data": 'proveedor'},
+						{"orderable": true, "targets": [2], "visible": ($.inArray("2", select.val())>=0), "className": 'text-center', "data": 'peso'},
+						{"orderable": true, "targets": [3], "visible": ($.inArray("3", select.val())>=0), "className": 'text-center', "data": 'precio'},
+						{"orderable": true, "targets": [4], "visible": ($.inArray("4", select.val())>=0), "className": 'text-center', "data": 'codigo_barras'},
+						{"orderable": true, "targets": [5], "visible": ($.inArray("5", select.val())>=0), "className": '', "data": 'presenta'},
+						{"orderable": true, "targets": [6], "visible": ($.inArray("6", select.val())>=0), "className": '', "data": 'tipos'},
+						{"orderable": true, "targets": [7], "visible": ($.inArray("7", select.val())>=0), "className": 'text-center', "data": 'stock'},
+						{"orderable": true, "targets": [8], "visible": ($.inArray("8", select.val())>=0), "className": 'text-center', "data": 'exist'},
+						{"orderable": true, "targets": [9], "visible": ($.inArray("9", select.val())>=0), "className": 'text-center', "data": 'stock_tiendita'},
+						{"orderable": true, "targets": [10], "visible": ($.inArray("10", select.val())>=0), "className": 'text-center', "data": 'stock_comunidad'},
+						{"orderable": true, "targets": [11], "visible": ($.inArray("11", select.val())>=0), "className": 'text-center', "data": 'stock_produccion'},
+						{"orderable": false, "targets": [12], "className": 'text-center', "data": 'acciones'},
+					],
+					'order': [0, 'asc'],
+					'lengthMenu': [[20,50,100,200],[20,50,100,200]],
+					'processing': true,
+					'serverSide': true,
+					'ajax': {
+						url: $apiUrl+'getAllAjax/0/0/0/_',
+						type: 'GET',
+					},
+					createdRow: function(row, data, dataIndex) {
+						$(row).attr('data-id', data.id);
+					}
+				});
+
+				$('#toolbar-'+tbl).html(container);
+				$('#toolbar-'+tbl+' #bus').keyup(function(e) { $("#"+tbl+"_filter label input").val($.trim($(this).val())).trigger('keyup'); });
+				$("#toolbar-"+tbl+" #bus").on("search", function(evt) { $("#"+tbl+"_filter label input").val(undefined).trigger('keyup'); });
+				$("#toolbar-"+tbl+" #btn-bus").click(function(evt) { evt.preventDefault(); $("#"+tbl+"_filter label input").val($.trim($('#bus').val())).trigger('keyup'); });
+				select.on('changed.bs.select', function(e, index) { blockPage();
+					column = $('#'+tbl).DataTable().column(index);
+					column.visible(!column.visible());
+					$.unblockUI();
+				});
+
+				$("#"+tbl+"_filter label").hide();
+			}
+		});
+		
+	</script>

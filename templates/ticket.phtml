@@ -1,0 +1,127 @@
+<?php
+	include 'core/defines.php';
+	if(isset($_SESSION['usuario'])) {
+		$user = $_SESSION['usuario'];
+		$username = explode(' ', $user->nombre)[0];
+	} else {
+		header('Location: '.URL_ROOT.'/login');
+		exit();
+	}
+
+	/* if($_SESSION['usuario']->usuario_tipo_id != 1) {
+		header('Location: '.URL_ROOT.'/403');
+		exit;
+	} */
+?>
+			
+<!DOCTYPE html>
+<html lang="es">
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<meta name="description" content="">
+		<meta name="author" content="">
+		<link rel="icon" type="image/png" sizes="16x16" href="<?=URL_ROOT?>/assets/images/logo_bamx.png">
+		<title><?= $vista . ' | ' . SITE_NAME ?></title>
+		<link href="<?=URL_ROOT?>/assets/plugins/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+		<link href="<?=URL_ROOT?>/assets/css/style.css" rel="stylesheet">
+		<link href="<?=URL_ROOT?>/assets/css/colors/peek.css" rel="stylesheet">
+		<style>
+			body {
+				min-width: 340px;
+				max-width: 340px;
+				margin-left: auto;
+				margin-right: auto;
+				line-height: 15px;
+			}
+			h5 {
+				width: 100%;
+				text-align: center;
+			}
+			body{
+				color: black!important;
+			}
+			h1, h2, h3, h4, h5, h6, table { color: black!important; }
+		</style>
+	</head>
+	<body>
+		<div class="container-fluid p-0">
+			<div class="card" style="width: 273px;">
+				<div class="card-body py-0">
+					<div class="row my-2 py-0">
+						<div class="col-sm-8 offset-sm-2">
+							<img src="<?= URL_ROOT ?>/assets/images/logo.png" class="img-fluid" alt="Responsive image">
+						</div>
+					</div>
+					<h4 class="font-weight-bold text-center">BACEH Hidalgo</h4>
+					</div>
+					<div class="row my-2">
+						<h5>
+						<strong>Ticket No. <?= $venta->id_venta?><br>
+							Vendedor <?= $venta->vendedor ?><br></strong>
+							<strong><?= date('d/m/Y - H:i:s', strtotime($venta->fecha)) ?></strong>
+						</h5>
+					</div>
+					<div class="row my-2">
+						<h5 class="font-weight-bold">
+							Beneficiario <br><strong><?= $venta->beneficiario?></strong>
+						</h5>
+					</div>
+					<div class="table-responsive">
+						<table class="table table-sm">
+							<thead>
+								<tr>
+									<th class="font-weight-bold text-center">#</th>
+									<th class="font-weight-bold text-right">$UNIT</th>
+									<th class="font-weight-bold text-right">$SUBT</th>
+								</tr>
+							</thead>
+							<tbody>
+							<?php 
+								foreach($detalles as $detalle): 
+							?>
+								<tr>
+								<td class="font-weight-bold text-center"><?= $detalle->cantidad ?></td>
+									<td class="font-weight-bold text-left" colspan="2"><?= $detalle->producto ?> <br><small class="font-weight-bold"> <?= $detalle->contenido ?> </small></td>
+								</tr>
+								<tr>
+									<td style="border-top: 0.1px solid white" class="font-weight-bold text-right" colspan=2><?= '$ '.number_format($detalle->precio, 2) ?></td>
+									<!-- <td class="text-left"><?= ($detalle->descuento_importe>0? '$ '.number_format($detalle->descuento_importe, 2): ($detalle->descuento_porcentaje>0? $detalle->descuento_porcentaje.'%': 'N/A')) ?></td> -->
+									<td style="border-top: 0.1px solid white" class="font-weight-bold text-right"><?= '$ '.number_format($detalle->importe, 2) ?></td>
+								</tr>
+							<?php endforeach; ?>
+							</tbody>
+							<tfoot>
+								<tr>
+								<strong><th colspan="2" class="font-weight-bold text-right p-t-20">TOTAL</th></strong>
+									<th class="font-weight-bold text-right p-t-20 lead">$ <?= number_format($venta->total, 2) ?></th>
+								</tr>
+								<tr>
+									<th class="text-right p-t-30"></th>
+								</tr>
+								<tr style="border-top: 0.3px solid black">
+									<th class="text-right p-t-20"></th>									
+								</tr>
+								<tr style="border-top: 0.3px solid black">
+									<th class="text-right p-t-20"></th>									
+								</tr>
+								<tr style="border-top: 0.3px solid black">
+									<th class="text-right p-t-20"></th>									
+								</tr>
+								<tr style="border-top: 0.3px solid black">
+									<th class="text-right p-t-20"></th>									
+								</tr>								
+							</tfoot>
+						</table>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<script>
+			setTimeout(function () { window.print(); }, 500);
+			window.onafterprint = window.close;
+		</script>
+	</body>
+</html>

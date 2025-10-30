@@ -1,0 +1,184 @@
+<?php 
+	include 'header.phtml';
+
+	if($_SESSION['usuario']->tipo == 3) {
+		header('Location: '.URL_ROOT.'/tienda');
+		exit;
+	}
+?>
+	<style>
+		#tbl-items tbody tr{
+			cursor: pointer;
+		}
+	</style>
+	<div class="row page-titles">
+		<div class="col-md-5 align-self-center">
+			<h3 class="text-themecolor"><i class="mdi mdi-format-list-bulleted-type"></i> <strong>Kardex</strong> Comunidades</h3>
+		</div>
+		<div class="col-md-7 align-self-center">
+			<div class="form-inline pull-right">
+				<input type="date" class="form-control form-control-sm m-r-10" id="ini" value="<?= date('Y-m-01') ?>">
+				<input type="date" class="form-control form-control-sm" id="fin" value="<?= date('Y-m-d') ?>">
+				<button class="btn btn-sm btn-secondary m-l-10" id="btnPrint"><i class="mdi mdi-printer fa-lg"></i> Imprimir</button>
+			</div>
+		</div>
+	</div>
+	<div class="container-fluid">
+		<div class="row">
+			<div class="col-4">
+				<div class="card">
+					<div class="card-body">
+						<h4 class="card-title">Productos</h4>
+						<!--div class="table-responsive">
+						</div-->
+						<table id="tbl-items" class="table table-hover table-striped table-sm w-100 mw-100">
+							<thead>
+								<tr>
+									<th>Descripción</th>
+								</tr>
+							</thead>
+							<tbody></tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+
+			<div class="col-sm-8">
+				<div class="card">
+					<div class="card-body">
+						<h4 class="card-title">Movimientos de Kardex <strong id="prod-desc"></strong></h4>
+						<table id="tbl-kardex" class="table table-hover table-striped table-sm w-100 mw-100">
+							<thead>
+								<tr>
+									<th>Fecha</th>
+									<th class="text-center">Inv Inicial</th>
+									<th class="text-center">Entradas</th>
+									<th class="text-center">Salidas</th>
+									<th class="text-center">Inv Final</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr class="no-data"><td colspan="5"><small>Seleccione un producto de la lista</small></td></tr>
+							</tbody>
+							<tfoot>
+								<tr>
+									<th class="text-right" colspan="2">TOTALES: </th>
+									<th class="text-center"></th>
+									<th class="text-center"></th>
+									<th></th>
+								</tr>
+							</tfoot>
+						</table>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<?php include 'footer.phtml';?>
+	<script type="text/javascript">
+		$(function() {
+			$apiUrl = '<?= URL_API ?>producto/';
+			$('#mnu-comu').addClass('show');
+			$('#mnu-karc').addClass('active');
+
+			getItems();
+			function getItems() { blockPage();
+				selectedColumns = $('#columns-tbl-items').val(); cleanTable('tbl-items'); $('#tbl-items tbody').empty();
+				createTable('tbl-items', true, selectedColumns); $.unblockUI();
+			}
+
+			function cleanTable(tbl) {
+				if($.fn.dataTable.isDataTable('#'+tbl)) {
+					table = $('#'+tbl).DataTable();
+					table.destroy();
+				}
+				$("#nodata").remove();
+			}
+
+			function createTable(tbl, paging) {
+				container = $('<div class="form-inline pull-right" style="overflow: visible"></div>');
+				searchContainer = $('<div class="input-group"></div>').appendTo(container);
+				search = $('<input type="text" id="bus" placeholder="Buscar por nombre" class="form-control">').appendTo(searchContainer);
+				icon = $('<div class="input-group-append"></div>').appendTo(searchContainer);
+				icon.append('<button type="button" class="btn btn-secondary btn-sm" id="btn-bus"><i class="fa fa-search"></i></button>');
+
+				$('#'+tbl).dataTable({
+					// scrollY: false,
+					scrollX: false,
+					paging: paging,
+					pagingType: "full_numbers",
+					dom: 'Rl<"#toolbar-'+tbl+'">frtip',
+					"columnDefs": [
+						{"orderable": true, "targets": [0], "visible": true, "className": '', "data": 'descripcion'},
+					],
+					'order': [0, 'asc'],
+					'processing': true,
+					'serverSide': true,
+					'ajax': {
+						url: $apiUrl+'getAllAjax/0/0/0/_',
+						type: 'GET',
+					},
+					createdRow: function(row, data, dataIndex) {
+						$(row).attr('data-id', data.id);
+					},
+					'lengthMenu': [[20,50,100,200],[20,50,100,200]]
+				});
+
+				$('#toolbar-'+tbl).html(container);
+				$('#toolbar-'+tbl+' #bus').keyup(function(e) { $("#"+tbl+"_filter label input").val($.trim($(this).val())).trigger('keyup'); });
+				$("#toolbar-"+tbl+" #bus").on("search", function(evt) { $("#"+tbl+"_filter label input").val(undefined).trigger('keyup'); });
+				$("#toolbar-"+tbl+" #btn-bus").click(function(evt) { evt.preventDefault(); $("#"+tbl+"_filter label input").val($.trim($('#bus').val())).trigger('keyup'); });
+				$("#"+tbl+"_filter label").hide();
+			}
+
+			$('#ini, #fin').change(function(){ getKardex($('#prod-desc').data('id')); });
+
+			$('body').on('click', $('#tbl-items tbody tr'), function(e){
+				$('.table-info').removeClass('table-info');
+				trp = $(e.target).parents('tr');
+				trp.addClass('table-info');
+				id = trp.data('id');
+				if(id > 0){
+					$('#prod-desc').html(trp.find('td:eq(0)').text()).data('id', id);
+					getKardex(id);
+				}
+			});
+
+			function getKardex(id){
+				$('#tbl-kardex tbody').empty();
+				$.get($apiUrl.replace('producto','kardex/comunidad')+id+"/"+$('#ini').val()+'/'+$('#fin').val(),
+					function (resp) {
+						ent = 0; sal = 0;
+						$.each(resp, function (index, mov) { 
+							addRowKardex(mov); 
+							ent += parseFloat(mov.entradas);
+							sal += parseFloat(mov.salidas);
+						});
+						$('#tbl-kardex tfoot th:eq(1)').html(ent.toFixed(3));
+						$('#tbl-kardex tfoot th:eq(2)').html(sal.toFixed(3));
+						if(resp.length == 0){
+							$('#tbl-kardex tbody').append('<tr class="no-data"><td colspan="5"><small>No existen movimientos para este producto en el periodo</small></td></tr>');
+						}
+					},
+					"json"
+				);
+			}
+
+			function addRowKardex(mov){
+				tr = $('<tr></tr>');
+				tr.append('<td>'+mov.fechaf+'</td>');
+				tr.append('<td class="text-center">'+mov.inicial+'</td>');
+				tr.append('<td class="text-center">'+mov.entradas+'</td>');
+				tr.append('<td class="text-center">'+mov.salidas+'</td>');
+				tr.append('<td class="text-center">'+mov.final+'</td>');
+				$('.no-data').remove();
+				$('#tbl-kardex tbody').append(tr);
+			}
+
+			$('#btnPrint').click(function(){
+				prod = $('#prod-desc').data('id');
+				if(prod > 0) window.open($apiUrl.replace('producto','kardex/comunidad/print')+prod+"/"+$('#ini').val()+'/'+$('#fin').val());
+			});
+		});
+		
+	</script>

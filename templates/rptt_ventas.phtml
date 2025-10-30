@@ -1,0 +1,159 @@
+<?php 
+	include 'header.phtml';
+
+	if($_SESSION['usuario']->tipo == 3) {
+		header('Location: '.URL_ROOT.'/tienda');
+		exit;
+	}
+?>
+	<div class="row page-titles">
+		<div class="col-md-5 align-self-center">
+			<h3 class="text-themecolor"><i class="mdi mdi-cart"></i> <strong>Ventas</strong> Tiendita</h3>
+		</div>
+		<div class="col-md-7 align-self-center">
+			<div class="form-inline pull-right">
+				<input type="date" class="form-control form-control-sm m-r-10" id="ini" value="<?= date('Y-m-d') ?>">
+				<input type="date" class="form-control form-control-sm" id="fin" value="<?= date('Y-m-d') ?>"> 
+				<button class="btn btn-sm btn-secondary m-l-10" id="btnPrint"><i class="mdi mdi-printer fa-lg"></i> Imprimir</button>
+			</div>
+		</div>
+	</div>
+	<div class="container-fluid">
+		<div class="row">
+			<div class="col-12">
+				<div class="card">
+					<div class="card-body">
+						<!--div class="table-responsive">
+						</div-->
+						<table id="tbl-items" class="table table-hover table-striped table-sm w-100 mw-100">
+							<thead>
+								<tr>
+									<th>Fecha</th>
+									<th>Producto</th>
+									<th class="text-center">Peso</th>
+									<th>Donador</th>
+									<th class="text-center">Cuota</th>
+									<th class="text-center">Inv Ini</th>
+									<th class="text-center">Entradas</th>
+									<th class="text-center">Tot Ent</th>
+									<th class="text-center">Venta</th>
+									<th class="text-center">Inv Fin</th>
+									<th class="text-center">Mermas</th>
+									<th class="text-center">Trab</th>
+									<th class="text-center">Donaci</th>
+									<th class="text-center">Instit</th>
+									<th class="text-right">T Venta</th>
+								</tr>
+							</thead>
+							<tbody></tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<?php include 'footer.phtml';?>
+	<script type="text/javascript">
+		$(function() {
+			$apiUrl = '<?= URL_API ?>venta/';
+			$('#mnu-tien').addClass('show');
+			$('#mnu-rptt').addClass('active');
+
+			$('#ini, #fin').change(function(){ getItems(); });
+
+			getItems();
+			function getItems() { 
+				blockPage();
+				selectedColumns = $('#columns-tbl-items').val(); cleanTable('tbl-items'); $('#tbl-items tbody').empty();
+				$.get($apiUrl+'rptVentasFinal/'+$('#ini').val()+'/'+$('#fin').val(), function(items) { 
+					$.each(items, function(index, item) { addItemRow(item); });
+					createTable('tbl-items', true, selectedColumns); $.unblockUI();
+				});
+			}
+
+			function addItemRow(item) {
+				tr = $('<tr></tr>').appendTo($('#tbl-items tbody'));
+
+				tr.append('<td data-order="'+item.fecha+'">'+item.fechaf+'</td>');
+				tr.append('<td>'+item.producto+'</td>');
+				tr.append('<td class="text-center">'+item.pesou+'</td>');
+				tr.append('<td>'+item.donador+'</td>');
+				tr.append('<td class="text-center">'+item.precio+'</td>');
+				tr.append('<td class="text-center">'+item.inicial+'</td>');
+				tr.append('<td class="text-center">'+item.entradas+'</td>');
+				tr.append('<td class="text-center">'+(parseInt(item.inicial) + parseInt(item.entradas))+'</td>');
+				tr.append('<td class="text-center">'+item.ventas+'</td>');
+				tr.append('<td class="text-center">'+item.final+'</td>');
+				tr.append('<td class="text-center">'+item.mermas+'</td>');
+				tr.append('<td class="text-center">'+item.trab+'</td>');
+				tr.append('<td class="text-center">'+item.donacion+'</td>');
+				tr.append('<td class="text-center">'+item.inst+'</td>');
+				tr.append('<td class="text-right">'+item.ventast+'</td>');
+			}
+
+			function cleanTable(tbl) {
+				if($.fn.dataTable.isDataTable('#'+tbl)) {
+					table = $('#'+tbl).DataTable();
+					table.destroy();
+				}
+				$("#nodata").remove();
+			}
+
+			function createTable(tbl, paging, arrColumns=null) {
+				container = $('<div class="form-inline pull-right" style="overflow: visible"></div>');
+				select = $('<select class="selectpicker" multiple data-selected-text-format="static" id="columns-'+tbl+'" title="Mostrar/Ocultar columnas" data-width="fit"></select>').appendTo(container);
+				opt = ['Fecha','Producto','Peso','Donador','Cuota','Inv Ini','Entradas','Tot Ent','Venta','Inv Fin','Mermas','Trab','Donaci','Instit','T Venta'];
+				$.each(opt, function (index, value) { 
+					select.append('<option class="form-control-sm" value="'+index+'">'+value+'</option>');
+				});
+				select.selectpicker('val', arrColumns!=null? arrColumns: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14']);
+				searchContainer = $('<div class="input-group"></div>').appendTo(container);
+				search = $('<input type="text" id="bus" placeholder="Buscar por producto, donador, fecha" class="form-control">').appendTo(searchContainer);
+				icon = $('<div class="input-group-append"></div>').appendTo(searchContainer);
+				icon.append('<button type="button" class="btn btn-secondary btn-sm" id="btn-bus"><i class="fa fa-search"></i></button>');
+
+				$('#'+tbl).dataTable({
+					scrollX: false,
+					paging: paging,
+					pagingType: "full_numbers",
+					dom: 'Rl<"#toolbar-'+tbl+'">frtip',
+					"columnDefs": [
+						{"orderable": true, "targets": [0], "visible": ($.inArray("0", select.val())>=0)},
+						{"orderable": true, "targets": [1], "visible": ($.inArray("1", select.val())>=0)},
+						{"orderable": true, "targets": [2], "visible": ($.inArray("2", select.val())>=0)},
+						{"orderable": true, "targets": [3], "visible": ($.inArray("3", select.val())>=0)},
+						{"orderable": true, "targets": [4], "visible": ($.inArray("4", select.val())>=0)},
+						{"orderable": true, "targets": [5], "visible": ($.inArray("5", select.val())>=0)},
+						{"orderable": true, "targets": [6], "visible": ($.inArray("6", select.val())>=0)},
+						{"orderable": true, "targets": [7], "visible": ($.inArray("7", select.val())>=0)},
+						{"orderable": true, "targets": [8], "visible": ($.inArray("8", select.val())>=0)},
+						{"orderable": true, "targets": [9], "visible": ($.inArray("9", select.val())>=0)},
+						{"orderable": true, "targets": [10], "visible": ($.inArray("10", select.val())>=0)},
+						{"orderable": true, "targets": [11], "visible": ($.inArray("11", select.val())>=0)},
+						{"orderable": true, "targets": [12], "visible": ($.inArray("12", select.val())>=0)},
+						{"orderable": true, "targets": [13], "visible": ($.inArray("13", select.val())>=0)},
+						{"orderable": true, "targets": [14], "visible": ($.inArray("14", select.val())>=0)},
+					],
+					'order': [0, 'desc'],
+					'lengthMenu': [[20,50,100,200],[20,50,100,200]]
+				});
+
+				$('#toolbar-'+tbl).html(container);
+				$('#toolbar-'+tbl+' #bus').keyup(function(e) { $("#"+tbl+"_filter label input").val($.trim($(this).val())).trigger('keyup'); });
+				$("#toolbar-"+tbl+" #bus").on("search", function(evt) { $("#"+tbl+"_filter label input").val(undefined).trigger('keyup'); });
+				$("#toolbar-"+tbl+" #btn-bus").click(function(evt) { evt.preventDefault(); $("#"+tbl+"_filter label input").val($.trim($('#bus').val())).trigger('keyup'); });
+				select.on('changed.bs.select', function(e, index) { blockPage();
+					column = $('#'+tbl).DataTable().column(index);
+					column.visible(!column.visible());
+					$.unblockUI();
+				});
+
+				$("#"+tbl+"_filter label").hide();
+			}
+
+			$('#btnPrint').click(function(){
+				window.open('<?= URL_ROOT ?>/venta/rptVentasFinal/print/'+$('#ini').val()+'/'+$('#fin').val());
+			});
+		});
+		
+	</script>

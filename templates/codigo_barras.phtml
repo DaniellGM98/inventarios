@@ -1,0 +1,205 @@
+<?php 
+	include 'header.phtml';
+
+	if($_SESSION['usuario']->tipo == 3) {
+		header('Location: '.URL_ROOT.'/tienda');
+		exit;
+	}
+?>
+<style>
+	#tbl-items tbody tr {
+		cursor: pointer;
+	}
+</style>
+
+<div class="row page-titles">
+	<div class="col-md-5 align-self-center">
+		<h3 class="text-themecolor"><i class="mdi mdi-barcode"></i> <strong>Código de Barras</strong></h3>
+	</div>
+	<div class="col-md-7 align-self-center">
+		<div class="form-inline pull-right">
+			<button class="btn btn-sm btn-secondary m-l-10" id="btnPrint"><i class="mdi mdi-printer fa-lg"></i> Imprimir</button>
+		</div>
+	</div>
+</div>
+
+<div class="container-fluid">
+	<div class="row">
+		<div class="col-4">
+			<div class="card">
+				<div class="card-body">
+					<h4 class="card-title">Productos</h4>
+					<table id="tbl-items" class="table table-hover table-striped table-sm w-100 mw-100">
+						<thead>
+							<tr>
+								<th>Descripción</th>
+								<th>Código Barras</th>
+							</tr>
+						</thead>
+						<tbody></tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+
+		<!-- Columna derecha para mostrar los códigos seleccionados -->
+		<div class="col-8">
+			<div class="card">
+				<div class="card-body">
+                    <div class="form-group mb-3">
+                        <h5 class="card-title">Número de etiquetas</h5>
+                        <select id="cantidadSelect" class="form-control form-control-sm w-25">
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                            <option value="6">6</option>
+                            <option value="7">7</option>
+                            <option value="8">8</option>
+                            <option value="9">9</option>
+                            <option value="10">10</option>
+                        </select>
+                    </div>
+					<h4 class="card-title">Códigos Seleccionados</h4>
+					<div id="codigo-lista" class="row"></div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<?php include 'footer.phtml'; ?>
+<script type="text/javascript">
+	$(function () {
+		let codigosSeleccionados = [];
+
+		const $apiUrl = '<?= URL_API ?>producto/';
+		$('#mnu-codigo').addClass('show');
+
+		getItems();
+
+		function getItems() {
+			blockPage();
+			cleanTable('tbl-items');
+			$('#tbl-items tbody').empty();
+			createTable('tbl-items', true);
+			$.unblockUI();
+		}
+
+		function cleanTable(tbl) {
+			if ($.fn.dataTable.isDataTable('#' + tbl)) {
+				const table = $('#' + tbl).DataTable();
+				table.destroy();
+			}
+			$("#nodata").remove();
+		}
+
+		function createTable(tbl, paging) {
+			const container = $('<div class="form-inline pull-right" style="overflow: visible"></div>');
+			const searchContainer = $('<div class="input-group"></div>').appendTo(container);
+			const search = $('<input type="text" id="bus" placeholder="Buscar por nombre o código" class="form-control">').appendTo(searchContainer);
+			const icon = $('<div class="input-group-append"></div>').appendTo(searchContainer);
+			icon.append('<button type="button" class="btn btn-secondary btn-sm" id="btn-bus"><i class="fa fa-search"></i></button>');
+
+			$('#' + tbl).dataTable({
+				scrollX: false,
+				paging: paging,
+				pagingType: "full_numbers",
+				dom: 'Rl<"#toolbar-' + tbl + '">frtip',
+				columnDefs: [
+					{ orderable: true, targets: [0], visible: true, className: '', data: 'descripcion' },
+					{ orderable: true, targets: [1], visible: true, className: '', data: 'codigo_barras' },
+				],
+				order: [0, 'asc'],
+				processing: true,
+				serverSide: true,
+				ajax: {
+					url: $apiUrl + 'getAllAjax2/0/0/0/_',
+					type: 'GET',
+				},
+				createdRow: function (row, data) {
+					$(row).attr('data-id', data.id);
+					$(row).attr('data-codigo_barras', data.codigo_barras);
+				},
+				lengthMenu: [[20, 50, 100, 200], [20, 50, 100, 200]]
+			});
+
+			$('#toolbar-' + tbl).html(container);
+			$('#toolbar-' + tbl + ' #bus').keyup(function (e) {
+				$("#" + tbl + "_filter label input").val($.trim($(this).val())).trigger('keyup');
+			});
+			$("#toolbar-" + tbl + " #bus").on("search", function () {
+				$("#" + tbl + "_filter label input").val(undefined).trigger('keyup');
+			});
+			$("#toolbar-" + tbl + " #btn-bus").click(function (evt) {
+				evt.preventDefault();
+				$("#" + tbl + "_filter label input").val($.trim($('#bus').val())).trigger('keyup');
+			});
+			$("#" + tbl + "_filter label").hide();
+		}
+
+		// Agrega código seleccionado al hacer clic en la fila
+		$('body').on('click', '#tbl-items tbody tr', function (e) {
+            $('.table-info').removeClass('table-info');
+            const trp = $(this);
+            trp.addClass('table-info');
+
+            const id = trp.data('id');
+            const codigo = String(trp.data('codigo_barras'));
+            const descripcion = trp.find('td').eq(0).text().trim();
+
+            if (id > 0) {
+                if (!codigosSeleccionados.some(item => item.codigo_barras === codigo)) {
+                    codigosSeleccionados.push({ descripcion, codigo_barras: codigo });
+                    renderizarCodigos();
+                }
+            }
+        });
+
+		function renderizarCodigos() {
+			$('#codigo-lista').empty();
+
+			if (codigosSeleccionados.length === 0) {
+				return;
+			}
+
+			codigosSeleccionados.forEach((item, index) => {
+				const card = `
+                <div class="col-md-4 mb-3" data-codigo="${item.codigo_barras}">
+                    <div class="card border">
+                    <div class="card-body d-flex justify-content-between align-items-center">
+                        <span style="overflow: hidden; white-space: nowrap; text-overflow: ellipsis; display: block; max-width: 200px;">
+                        <strong>${item.descripcion}</strong><br><small>${item.codigo_barras}</small>
+                        </span>
+                        <button class="btn btn-sm btn-danger btn-quitar" data-index="${index}">
+                        <i class="fa fa-times"></i>
+                        </button>
+                    </div>
+                    </div>
+                </div>`;
+                $('#codigo-lista').append(card);
+			});
+		}
+
+		// Eliminar código seleccionado
+		$('body').on('click', '.btn-quitar', function () {
+			const index = $(this).data('index');
+			codigosSeleccionados.splice(index, 1);
+			renderizarCodigos();
+		});
+
+		// Botón imprimir: enviar el JSON codificado en base64
+		$('#btnPrint').click(function () {
+			if (codigosSeleccionados.length === 0) {
+				return;
+			}
+			const cantidad = $('#cantidadSelect').val();
+			const jsonStr = JSON.stringify(codigosSeleccionados);
+			const base64Str = btoa(jsonStr);
+
+			const url = $apiUrl + 'rptCodigosBarra/print/' + encodeURIComponent(base64Str) + '/' + cantidad;
+			window.open(url);
+		});
+	});
+</script>

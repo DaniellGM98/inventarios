@@ -1,0 +1,351 @@
+<?php 
+	include 'header.phtml';
+
+	if($_SESSION['usuario']->tipo == 3) {
+		header('Location: '.URL_ROOT.'/tienda');
+		exit;
+	}
+?>
+	<div class="row page-titles">
+		<div class="col-md-5 align-self-center">
+			<h3 class="text-themecolor"><i class="mdi mdi-account-circle"></i> Clientes o Destinos</h3>
+		</div>
+	</div>
+	<div class="container-fluid">
+		<div class="row">
+			<div class="col-12">
+				<div class="card">
+					<div class="card-body">
+						<?php if(in_array(MOD_CLIENTES_ADD, $permisos)) : ?>
+						<button class="btn btn-success pull-right" id="btnAdd"><i class="mdi mdi-plus"></i> Agregar</button>
+						<?php endif; ?>
+
+						<h4 class="card-title">Clientes</h4>
+						<h6 class="card-subtitle">Agrega, edita y da de baja clientes y destinos</h6>
+
+						<div class="table-responsive">
+							<table id="tbl-items" class="table table-hover table-striped table-sm">
+								<thead>
+									<tr>
+										<th>Nombre</th>
+										<th class="text-center">Tel&eacute;fono</th>
+										<th class="text-center">Email</th>
+										<th class="text-center">Dirección</th>
+										<th class="text-center">Acciones</th>
+									</tr>
+								</thead>
+								<tbody></tbody>
+							</table>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<?php if(in_array(MOD_CLIENTES_ADD, $permisos) || in_array(MOD_CLIENTES_EDIT, $permisos)) : ?>
+		<div id="frm-item" class="modal" >
+			<div class="modal-dialog">
+				<div class="modal-content d-flex p-2">
+					<div class="modal-header">
+						<h3 class="modal-title">Datos del Cliente</h3>
+					</div>
+					<div class="modal-body">
+						<form class="form p-t-20">
+							<div class="form-group">
+								<label for="item-nombre">Nombre</label>
+								<div class="input-group">
+									<div class="input-group-prepend">
+										<span class="input-group-text" id="basic-addon1">
+											<i class="ti-user"></i>
+										</span>
+									</div>
+									<input type="text" class="form-control" id="item-nombre" placeholder="Ingresa el Nombre" required>
+								</div>
+							</div>
+							<div class="form-group">
+								<label for="item-apellidos">Apellidos</label>
+								<div class="input-group">
+									<div class="input-group-prepend">
+										<span class="input-group-text" id="basic-addon1">
+											<i class="ti-user"></i>
+										</span>
+									</div>
+									<input type="text" class="form-control" id="item-apellidos" placeholder="Ingresa el Apellido" required>
+								</div>
+							</div>
+							<div class="form-group">
+								<label for="item-telefono">Tel&eacute;fono</label>
+								<div class="input-group">
+									<div class="input-group-prepend">
+										<span class="input-group-text" id="basic-addon1">
+											<i class="fa fa-phone"></i>
+										</span>
+									</div>
+									<input type="text" class="form-control phone-inputmask" id="item-telefono" placeholder="Tel&eacute;fono">
+								</div>
+							</div>
+							<div class="form-group">
+								<label for="item-email">Email</label>
+								<div class="input-group">
+									<div class="input-group-prepend">
+										<span class="input-group-text" id="basic-addon1">
+											<i class="ti-email"></i>
+										</span>
+									</div>
+									<input type="text" class="form-control email-inputmask" id="item-email" placeholder="Email">
+								</div>
+							</div>
+							<div class="form-group">
+								<label for="item-direccion">Dirección</label>
+								<div class="input-group">
+									<div class="input-group-prepend">
+										<span class="input-group-text" id="basic-addon1">
+											<i class="ti-home"></i>
+										</span>
+									</div>
+									<textarea class="form-control" id="item-direccion" placeholder="Ingrese la direccion" rows="3"></textarea>
+								</div>
+							</div>
+							<input type="hidden" id="item-id" value="0">
+						</form>
+					</div>
+					<div class="modal-footer d-flex justify-content-end">
+						<button type="submit" class="btn btn-inverse waves-effect waves-light m-r-20" data-dismiss="modal">Cancelar</button>
+						<button type="submit" class="btn btn-success waves-effect waves-light" id="btnSave">Guardar</button>
+					</div>
+				</div>
+			</div>
+		</div>
+		<?php endif; ?>
+	</div>
+	<?php include 'footer.phtml';?>
+	<script type="text/javascript">
+		$(function() {
+			$apiUrl = '<?= URL_API ?>cliente/';
+			$('#mnu-cli').addClass('active');
+
+			getItems();
+			function getItems() { blockPage();
+				selectedColumns = $('#columns-tbl-items').val(); cleanTable('tbl-items'); $('#tbl-items tbody').empty();
+				$.get($apiUrl+'getAll/0/1000', function(items) { 
+					if(items.total > 0) { $.each(items.result, function(index, item) { addItemRow(item); }); }
+					createTable('tbl-items', true, selectedColumns); $.unblockUI();
+				});
+			}
+
+			function addItemRow(item) {
+				$('#tbl-items [data-id="'+item.id_cliente+'"]').remove();
+				tr = $('<tr data-id="'+item.id_cliente+'"></tr>').appendTo($('#tbl-items tbody'));
+
+				tr.append('<td class="text-left"><small class="nombre">'+item.nombre+' '+item.apellidos+'</small></td>');
+				tr.append('<td class="text-center"><small class="telefono">'+item.telefono+'</small></td>');
+				tr.append('<td><small class="email">'+item.email+'</small></td>');
+				tr.append('<td><small class="direccion">'+item.direccion+'</small></td>');
+
+				tda = $('<td class="text-center"></td>').appendTo(tr);
+				acciones = $('<div></div>').appendTo(tda);
+				<?php if(in_array(MOD_CLIENTES_EDIT, $permisos)) : ?> acciones.append('<a href="#" data-popup="tooltip" title="Editar" class="btnEdit text-primary"><i class="mdi mdi-pencil fa-lg"></i></a> ');  <?php endif; ?>
+				<?php if(in_array(MOD_CLIENTES_DEL, $permisos)) : ?> acciones.append('<a href="#" data-popup="tooltip" title="Dar de baja" class="btnDel"><i class="mdi mdi-delete fa-lg" style="color:red;"></i></a>'); <?php endif; ?>
+			}
+
+			<?php if(in_array(MOD_CLIENTES_ADD, $permisos)) : ?>
+			$('#btnAdd').click(function(e) { e.preventDefault();
+				clearData();
+				$('#frm-item').modal('show');
+			});
+			<?php endif; ?>
+
+			<?php if(in_array(MOD_CLIENTES_EDIT, $permisos)) : ?>
+			$('tbody').on('click', '.btnEdit', function(event) { event.preventDefault(); blockPage();
+				clearData();
+				$('#frm-item .validation-error-label').remove();
+				id = $(this).parents('tr').data('id');
+				
+				$.get($apiUrl+'get/'+id, function(item) { item = item.result
+					$.each(item, function(index, val) { $('#item-'+index).val(val).trigger('change'); });
+					$('#item-id').val(item.id_cliente);
+					$('#frm-item').modal('show');
+					$.unblockUI();
+				});
+			});
+			<?php endif; ?>
+
+			<?php if(in_array(MOD_CLIENTES_DEL, $permisos)) : ?>
+			$('tbody').on('click', '.btnDel', function(event) { event.preventDefault(); 
+				id = $(this).parents('tr').data('id');
+				trp = $('#tbl-items tr[data-id="'+id+'"]');
+				nom = getTrElement('tbl-items', trp).find('.nombre').text();
+				swal({ title:"Dar de baja cliente", text:"Se dará de baja al cliente <strong>"+nom+"</strong>", type:"warning", html:true, showCancelButton:true, cancelButtonText:"Cancelar", confirmButtonColor:"#DD6B55", confirmButtonText:"Si, eliminar", closeOnConfirm:false  }, 
+					function(resp) {
+						blockPage();
+						if(resp) {
+							$('#tbl-items tbody').empty();
+							$.ajax({ url:$apiUrl+'del/'+id, type:'PUT', dataType:'json',
+								success: function(resp) {
+									if(resp.response) {
+										selectedColumns = $('#columns-tbl-items').val(); cleanTable('tbl-items'); trp.remove(); createTable('tbl-items', true, selectedColumns);
+										swal({ type:"success", title:"¡Listo!", text:"Se eliminó el cliente", timer:4000 });
+									} else { swal({ type:"warning", title:"Oops!", text:resp.message, timer:4000 });  }
+									$.unblockUI();
+								}
+							});
+						} else { $.unblockUI(); }
+					}
+				);
+			});
+			<?php endif; ?>
+
+			<?php if(in_array(MOD_CLIENTES_ADD, $permisos) || in_array(MOD_CLIENTES_EDIT, $permisos)) : ?>
+			$('#frm-item').on('shown.bs.modal', function () { $('#item-nombre').focus(); });
+
+			/* $('#item-nombre').change(function() {
+				$('.invalid-tooltip').remove();
+				$.get($apiUrl+'getByNombreMD5/'+$.md5($.trim($(this).val().toLowerCase())), function(cliente) { if(cliente.result.length > 0) { cliente = cliente.result;
+					if(cliente.length>1 || cliente[0].id!=parseInt($('#item-id').val())) {
+						$errLabel = $('<div class="row invalid-tooltip">Ya existe un cliente con el mismo nombre</div>');
+						$('#item-nombre').after($errLabel);
+						$errLabel.show();
+						// setTimeout(() => { $('.invalid-tooltip').remove(); }, 4000);
+					}
+				}}, 'json');
+			}); */
+
+			$('#btnSave').click(function() {
+				$('.invalid-tooltip').remove();
+				id = parseInt($('#item-id').val());
+				data = {};
+
+				$.each($('#frm-item').find('input, select, textarea'), function(index, elem) {
+					ide = $(elem).attr('id').replace('item-','');
+					data[ide] = $.trim($(elem).val());
+				});
+				data.telefono = data.telefono.replace('(','').replace(')','').replace(' ','').replace('-','').replace(/_/g, '');
+
+				$errLabel = $('<div class="invalid-tooltip"></div>');
+				if(data.nombre == '') {
+					$errLabel.html('Debe ingresar el nombre');
+					$('#item-nombre').focus().after($errLabel);
+					$errLabel.show();
+				} /* else if(data.telefono != '' && data.telefono.length != 10) {
+					$errLabel.html('El teléfono debe ser a 10 dígitos');
+					$('#item-telefono').after($errLabel);
+					$errLabel.show();
+				} */ else {
+					blockPage();
+					if(id == 0) {
+						data.status = 1;
+						$.post($apiUrl+'add/', data, function(resp) {
+							if(resp.response) {
+								data.id_cliente = resp.result;
+								selectedColumns = $('#columns-tbl-items').val(); cleanTable('tbl-items'); addItemRow(data); createTable('tbl-items', true, selectedColumns);
+								$('#item-id').val(0);
+								$('#frm-item').modal('hide');
+								swal({ type: "success", title: "¡Listo!", text: "Se guardaron los datos correctamente.", timer: 4000 });
+							} else { swal({ type: "warning", title: "Oops!", text: resp.message, timer: 4000 }); }
+							$.unblockUI();
+						},'json');
+					} else {
+						$.ajax({ url:$apiUrl+'edit/'+id, type:'PUT', dataType:'json', data:data, }).done(
+							function(resp) {
+								if(resp.response) {
+									tr = $('#tbl-items tr[data-id="'+id+'"]'); trInfo = getTrElement('tbl-items', tr);
+									trInfo.find('.nombre').html(data.nombre); trInfo.find('.telefono').html(data.telefono); trInfo.find('.telefono').html(data.telefono); trInfo.find('.email').html(data.email);
+									trInfo.find('.clave').html(data.clave); trInfo.find('.rfc').html(data.rfc); trInfo.find('.direccion').html(data.direccion); 
+									setTrData('tbl-items', tr, trInfo);
+									// getItems();
+									$('#item-id').val(0);
+									$('#frm-item').modal('hide');
+									swal({ type: "success", title: "¡Listo!", text: "Se guardaron los datos correctamente.", timer: 4000 });
+								} else { swal({ type: "warning", title: "Oops!", text: resp.message, timer: 4000 }); }
+								$.unblockUI();
+							}
+						);
+					}
+				}
+			});
+
+			function clearData() {
+				$('.invalid-tooltip').remove();
+				$('#frm-item input, #frm-item textarea').val('');
+				$('#item-id').val(0);
+			}
+			<?php endif; ?>
+
+			function getTrElement(tblName, tr) {
+				container = $('<div></div>');
+				trInfo = $('#'+tblName).DataTable().row(tr).data();
+				$.each(trInfo, function(index, trInfoRow) {
+					container.append(trInfoRow);
+				});
+				
+				return container;
+			}
+
+			function setTrData(tblName, row, trElement) {
+				arrContent = [];
+				$.each(trElement.children(), function(index, element) { element = $(element);
+					tagName = element.prop('tagName').toLowerCase();
+					html = '<'+tagName;
+					$.each(element[0].attributes, function(index, attr) {
+						html += ' '+attr.name+'="'+attr.value+'"';
+					});
+					html += '>'+element.html()+'</'+tagName+'>';
+
+					arrContent.push(html);
+				});
+
+				$('#'+tblName).DataTable().row(row).data(arrContent);
+				swal({ type:"success", title:"¡Listo!", text:"Se guardaron los cambios correctamente.", timer:4000 });
+			}
+
+			function cleanTable(tbl) {
+				if($.fn.dataTable.isDataTable('#'+tbl)) {
+					table = $('#'+tbl).DataTable();
+					table.destroy();
+				}
+				$("#nodata").remove();
+			}
+
+			function createTable(tbl, paging, arrColumns=null) {
+				container = $('<div class="form-inline pull-right" style="overflow: visible"></div>');
+				select = $('<select class="selectpicker" multiple data-selected-text-format="static" id="columns-'+tbl+'" title="Mostrar/Ocultar columnas" data-width="fit"></select>').appendTo(container);
+				select.append('<option class="form-control-sm" value="0">Nombre</option>');
+				select.append('<option class="form-control-sm" value="1">Teléfono</option>');
+				select.append('<option class="form-control-sm" value="2">Email</option>');
+				select.append('<option class="form-control-sm" value="3">Dirección</option>');
+				select.selectpicker('val', arrColumns!=null? arrColumns: ['0', '1', '2']);
+				searchContainer = $('<div class="input-group"></div>').appendTo(container);
+				search = $('<input type="text" id="bus" placeholder="Buscar por nombre" class="form-control">').appendTo(searchContainer);
+				icon = $('<div class="input-group-append"></div>').appendTo(searchContainer);
+				icon.append('<button type="button" class="btn btn-secondary btn-sm" id="btn-bus"><i class="fa fa-search"></i></button>');
+
+				$('#'+tbl).dataTable({
+					// scrollY: false,
+					scrollX: false,
+					paging: paging,
+					pagingType: "full_numbers",
+					dom: 'Rl<"#toolbar-'+tbl+'">frtip',
+					"columnDefs": [
+						{"orderable": true, "targets": [0], "visible": ($.inArray("0", select.val())>=0)},
+						{"orderable": true, "targets": [1], "visible": ($.inArray("1", select.val())>=0)},
+						{"orderable": true, "targets": [2], "visible": ($.inArray("2", select.val())>=0)},
+						{"orderable": true, "targets": [3], "visible": ($.inArray("3", select.val())>=0)},
+						{"orderable": false, "targets": [4]},
+					],
+					'order': [0, 'asc']
+				});
+
+				$('#toolbar-'+tbl).html(container);
+				$('#toolbar-'+tbl+' #bus').keyup(function(e) { $("#"+tbl+"_filter label input").val($.trim($(this).val())).trigger('keyup'); });
+				$("#toolbar-"+tbl+" #bus").on("search", function(evt) { $("#"+tbl+"_filter label input").val(undefined).trigger('keyup'); });
+				$("#toolbar-"+tbl+" #btn-bus").click(function(evt) { evt.preventDefault(); $("#"+tbl+"_filter label input").val($.trim($('#bus').val())).trigger('keyup'); });
+				select.on('changed.bs.select', function(e, index) { blockPage();
+					column = $('#'+tbl).DataTable().column(index);
+					column.visible(!column.visible());
+					$.unblockUI();
+				});
+
+				$("#"+tbl+"_filter label").hide();
+			}
+		});
+		
+	</script>

@@ -1,0 +1,276 @@
+<?php 
+	include 'header.phtml';
+
+	if($_SESSION['usuario']->tipo == 3) {
+		header('Location: '.URL_ROOT.'/tienda');
+		exit;
+	}
+?>
+	<div class="row page-titles">
+		<div class="col-md-5 align-self-center">
+			<h3 class="text-themecolor"><i class="mdi mdi-chart-bubble"></i> <strong>Existencias</strong> Tiendita</h3>
+		</div>
+		<div class="col-md-7 align-self-center">
+			<div class="form-inline pull-right">
+				<select class="form-control form-control-sm" id="cajero">
+				<?php $cajeros = $todo->model->usuario->getCajeros()->result; 
+					foreach($cajeros as $user): ?>
+					<option value="<?= $user->id_usuario ?>"><?= $user->nombre.' '.$user->apellidos ?></option>
+				<?php endforeach; ?>
+				</select> 
+				<button class="btn btn-sm btn-secondary m-l-10" id="btnPrint"><i class="mdi mdi-printer fa-lg"></i> Imprimir</button>
+				<button class="btn btn-sm btn-secondary m-l-10" id="btnXls"><i class="mdi mdi-file-excel fa-lg"></i> Excel</button>
+			</div>
+		</div>
+	</div>
+	<div class="container-fluid">
+		<div class="row">
+			<div class="col-12">
+				<div class="card">
+					<div class="card-body">
+						<h4 class="card-title">Productos</h4>
+						<!--div class="table-responsive">
+						</div-->
+						<table id="tbl-items" class="table table-hover table-striped table-sm w-100 mw-100">
+							<thead>
+								<tr>
+									<th>Código Barras</th>
+									<th>Descripción</th>
+									<th class="text-center">Stock Tienda</th>
+									<th class="text-center">Stock Caja</th>
+									<th class="text-center"></th>
+								</tr>
+							</thead>
+							<tbody></tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<?php if(in_array(MOD_TRANSFER_TIEN_ADD, $permisos)) : ?>
+	<div id="frm-item" class="modal" data-backdrop="static">
+		<div class="modal-dialog">
+			<div class="modal-content d-flex p-2">
+				<div class="modal-header">
+					<h3 class="modal-title"><i class="mdi mdi-shuffle-variant"></i> Nueva transferencia</h3>
+				</div>
+				<div class="modal-body">
+					<table id="tbl-detalle" class="table table-hover table-striped table-sm w-100 mw-100">
+						<tr>
+							<th class="text-right">Origen</th>
+							<td></td>
+						</tr>
+						<tr>
+							<th class="text-right">Código de barras</th>
+							<td></td>
+						</tr>
+						<tr>
+							<th class="text-right">Producto</th>
+							<td></td>
+						</tr>
+						<tr>
+							<th class="text-right">Stock</th>
+							<td></td>
+						</tr>
+					</table>
+					<hr>
+					<form class="form">
+						<div class="form-group mb-0">
+							<div class="row">
+								<div class="col-sm-8">
+									<label for="item-destino" class="col-form-label-sm cajero">Destino</label>
+									<div class="input-group input-group-sm cajero">
+										<div class="input-group-prepend">
+											<span class="input-group-text" id="basic-addon1">
+												<i class="mdi mdi-account"></i>
+											</span>
+										</div>
+										<select class="form-control form-control-sm" id="item-destino">
+										<option value="0">Seleccione</option>
+										<?php $cajeros = $todo->model->usuario->getCajeros()->result; 
+											foreach($cajeros as $user): ?>
+											<option value="<?= $user->id_usuario ?>"><?= $user->nombre.' '.$user->apellidos ?></option>
+										<?php endforeach; ?>
+										</select>
+									</div>
+								</div>
+								<div class="col-sm-4">
+									<label for="item-cant" class="col-form-label-sm cant">Cantidad</label>
+									<input type="number" class="form-control form-control-sm text-center" id="item-cant" placeholder="Cantidad" min="0">
+								</div>
+							</div>
+						</div>
+						<input type="hidden" id="item-prod" value="0">
+						<input type="hidden" id="item-stock" value="0">
+					</form>
+				</div>
+				<div class="modal-footer d-flex justify-content-end">
+					<button type="submit" class="btn btn-inverse waves-effect waves-light m-r-20" data-dismiss="modal">Cancelar</button>
+					<button type="submit" class="btn btn-info" id="btnSave"><i class="mdi mdi-check fa-lg"></i> Transferir</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<?php endif; ?>
+
+	<?php include 'footer.phtml';?>
+	<script type="text/javascript">
+		$(function() {
+			$apiUrl = '<?= URL_API ?>producto/';
+			$('#mnu-tien').addClass('show');
+			$('#mnu-exist').addClass('active');
+
+			getItems();
+			function getItems() { 
+				blockPage();
+				selectedColumns = $('#columns-tbl-items').val(); cleanTable('tbl-items'); $('#tbl-items tbody').empty();
+				$.get($apiUrl+'getByCajero/'+$('#cajero').val(), function(items) { 
+					$.each(items.result, function(index, item) { addItemRow(item); });
+					createTable('tbl-items', true, selectedColumns); $.unblockUI();
+				});
+			}
+
+			function addItemRow(item) {
+				tr = $('<tr data-id="'+item.id_producto+'"></tr>').appendTo($('#tbl-items tbody'));
+				tipo = $('#item-tipo option[value="'+item.tipo+'"]').text();
+
+				tr.append('<td class="text-left"><small class="codigo">'+item.codigo+'</small></td>');
+				tr.append('<td class="text-left"><small class="descripcion">'+item.descripcion+'</small></td>');
+				tr.append('<td class="text-center"><small class="stock_tiendita">'+item.stock_tiendita+'</small></td>');
+				tr.append('<td class="text-center"><small class="stock_cajero">'+item.stock_cajero+'</small></td>');
+
+				tda = $('<td class="text-center"></td>');
+				if(item.stock_cajero > 0)
+				<?php if(in_array(MOD_TRANSFER_TIEN_ADD, $permisos)) : ?> tda.append('<a href="#" data-popup="tooltip" title="Transferir" class="btnAdd" data-prod="'+item.id_producto+'"><i class="mdi mdi-shuffle-variant fa-lg"></i></a>'); <?php endif; ?>
+				tr.append(tda);
+			}
+
+			function cleanTable(tbl) {
+				if($.fn.dataTable.isDataTable('#'+tbl)) {
+					table = $('#'+tbl).DataTable();
+					table.destroy();
+				}
+				$("#nodata").remove();
+			}
+
+			function createTable(tbl, paging, arrColumns=null) {
+				container = $('<div class="form-inline pull-right" style="overflow: visible"></div>');
+				select = $('<select class="selectpicker" multiple data-selected-text-format="static" id="columns-'+tbl+'" title="Mostrar/Ocultar columnas" data-width="fit"></select>').appendTo(container);
+				select.append('<option class="form-control-sm" value="0">Código Barras</option>');
+				select.append('<option class="form-control-sm" value="1">Descripción</option>');
+				select.append('<option class="form-control-sm" value="2">Stock Tienda</option>');
+				select.append('<option class="form-control-sm" value="3">Stock Caja</option>');
+				select.selectpicker('val', arrColumns!=null? arrColumns: ['0', '1', '2', '3']);
+				searchContainer = $('<div class="input-group"></div>').appendTo(container);
+				search = $('<input type="text" id="bus" placeholder="Buscar por codigo, descripcion" class="form-control">').appendTo(searchContainer);
+				icon = $('<div class="input-group-append"></div>').appendTo(searchContainer);
+				icon.append('<button type="button" class="btn btn-secondary btn-sm" id="btn-bus"><i class="fa fa-search"></i></button>');
+
+				$('#'+tbl).dataTable({
+					// scrollY: false,
+					scrollX: false,
+					paging: paging,
+					pagingType: "full_numbers",
+					dom: 'Rl<"#toolbar-'+tbl+'">frtip',
+					"columnDefs": [
+						{"orderable": true, "targets": [0], "visible": ($.inArray("0", select.val())>=0)},
+						{"orderable": true, "targets": [1], "visible": ($.inArray("1", select.val())>=0)},
+						{"orderable": true, "targets": [2], "visible": ($.inArray("2", select.val())>=0)},
+						{"orderable": true, "targets": [3], "visible": ($.inArray("3", select.val())>=0)},
+						{"orderable": true, "targets": [4]},
+					],
+					'order': [0, 'desc'],
+					'lengthMenu': [[20,50,100,200],[20,50,100,200]]
+				});
+
+				$('#toolbar-'+tbl).html(container);
+				$('#toolbar-'+tbl+' #bus').keyup(function(e) { $("#"+tbl+"_filter label input").val($.trim($(this).val())).trigger('keyup'); });
+				$("#toolbar-"+tbl+" #bus").on("search", function(evt) { $("#"+tbl+"_filter label input").val(undefined).trigger('keyup'); });
+				$("#toolbar-"+tbl+" #btn-bus").click(function(evt) { evt.preventDefault(); $("#"+tbl+"_filter label input").val($.trim($('#bus').val())).trigger('keyup'); });
+				select.on('changed.bs.select', function(e, index) { blockPage();
+					column = $('#'+tbl).DataTable().column(index);
+					column.visible(!column.visible());
+					$.unblockUI();
+				});
+
+				$("#"+tbl+"_filter label").hide();
+			}
+
+			$('#cajero').change(function(){ getItems(); });
+
+			$('#btnPrint').click(function(){
+				window.open('<?= URL_ROOT ?>/producto/rptExistenciasByCajero/print/'+$('#cajero').val());
+			});
+
+			$('#btnXls').click(function(){
+				window.open('<?= URL_ROOT ?>/producto/rptExistenciasByCajero/xlsx/'+$('#cajero').val());
+			});
+
+			<?php if(in_array(MOD_TRANSFER_TIEN_ADD, $permisos)) : ?>
+			$('body').on('click', '.btnAdd', function(e){
+				e.preventDefault();
+				trp = $(this).parents('tr');
+				$('#item-destino option').show();
+
+				$('#frm-item td:eq(0)').html($('#cajero option:selected').text());
+				$('#frm-item td:eq(1)').html(trp.find('.codigo').text());
+				$('#frm-item td:eq(2)').html(trp.find('.descripcion').text());
+				$('#frm-item td:eq(3)').html(trp.find('.stock_cajero').text());
+				$('#item-prod').val($(this).data('prod'));
+				$('#item-stock').val(trp.find('.stock_cajero').text());
+
+				$('#item-destino option[value="'+$('#cajero').val()+'"]').hide();
+
+				$('#item-destino').val(0);
+				$('#item-cant').val('').focus();
+				$('#frm-item').modal('show');
+			});
+
+			$('#btnSave').click(function(){
+				$('.invalid-tooltip').remove();
+				data = {
+					fk_origen: $('#cajero').val(),
+					fk_destino: $('#item-destino').val(),
+					fk_producto: $('#item-prod').val(),
+					cantidad: $('#item-cant').val(),
+				};
+
+				$errLabel = $('<div class="invalid-tooltip"></div>');
+				if(data.fk_destino == 0){
+					$errLabel.html('Debe seleccionar el destino');
+					$('#item-destino').focus().after($errLabel);
+					$errLabel.show();
+					return;
+				}else if(data.cantidad <= 0){
+					$errLabel.html('Debe ingresar la cantidad');
+					$('#item-cant').focus().after($errLabel);
+					$errLabel.show();
+					return;
+				}else if(parseFloat(data.cantidad) > parseFloat($('#item-stock').val())){
+					$errLabel.html('Cantidad mayor al stock');
+					$('#item-cant').focus().after($errLabel);
+					$errLabel.show();
+					return;
+				}else{
+					blockPage();
+					$.post($apiUrl.replace('producto','transferencia')+"add/", data,
+						function (resp) {
+							if(resp.response){
+								$('#frm-item input').val('');
+								$('#frm-item').modal('hide');
+								swal({ type: "success", title: "¡Listo!", text: "Se guardaron los datos correctamente.", timer: 4000 });
+								getItems();
+							} else { swal({ type: "warning", title: "Oops!", text: resp.message, timer: 4000 }); }
+							$.unblockUI();
+						},
+						"json"
+					);
+				}
+			});
+
+			<?php endif; ?>
+		});
+		
+	</script>

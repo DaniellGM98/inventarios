@@ -1,0 +1,147 @@
+<?php 
+	include 'header.phtml';
+
+	if($_SESSION['usuario']->tipo == 3) {
+		header('Location: '.URL_ROOT.'/tienda');
+		exit;
+	}
+?>
+	<div class="row page-titles">
+		<div class="col-md-5 align-self-center">
+			<h3 class="text-themecolor"><i class="mdi mdi-download"></i> <strong>Entradas</strong> Almacen General</h3>
+		</div>
+		<div class="col-md-7 align-self-center">
+			<div class="form-inline pull-right">
+				<input type="date" class="form-control form-control-sm m-r-10" id="ini" value="<?= date('Y-m-01') ?>">
+				<input type="date" class="form-control form-control-sm" id="fin" value="<?= date('Y-m-d') ?>"> 
+				<select class="form-control form-control-sm m-l-10" id="clave">
+					<option value="Todas">Todas las claves</option>
+				</select> 
+				<button class="btn btn-sm btn-secondary m-l-10" id="btnPrint"><i class="mdi mdi-printer fa-lg"></i> Imprimir</button>
+			</div>
+		</div>
+	</div>
+	<div class="container-fluid">
+		<div class="row">
+			<div class="col-12">
+				<div class="card">
+					<div class="card-body">
+						<!--div class="table-responsive">
+						</div-->
+						<table id="tbl-items" class="table table-hover table-striped table-sm w-100 mw-100">
+							<thead>
+								<tr>
+									<th>Fecha</th>
+									<th>Donador</th>
+									<th>Producto</th>
+									<th class="text-right">Valor</th>
+									<th class="text-right">Kilogramos</th>
+									<th class="text-center">Nota Entrada</th>
+								</tr>
+							</thead>
+							<tbody></tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<?php include 'footer.phtml';?>
+	<script type="text/javascript">
+		$(function() {
+			$apiUrl = '<?= URL_API ?>entrada/';
+			$('#mnu-alm').addClass('show');
+			$('#mnu-rpta').addClass('active');
+
+			$('#ini, #fin, #clave').change(function(){ getItems(); });
+
+			$.get($apiUrl.replace('entrada','proveedor')+"getClaves/", 
+				function (resp) {
+					$.each(resp.result, function (i, item) { 
+						 $('#clave').append('<option value="'+item.clave+'">'+item.clave+'</option>');
+					});
+					getItems();
+				},
+				"json"
+			);
+
+			// getItems();
+			function getItems() { 
+				blockPage();
+				selectedColumns = $('#columns-tbl-items').val(); cleanTable('tbl-items'); $('#tbl-items tbody').empty();
+				$.get($apiUrl+'rpt/'+$('#ini').val()+'/'+$('#fin').val()+'/'+$('#clave').val(), function(items) { 
+					$.each(items, function(index, item) { addItemRow(item); });
+					createTable('tbl-items', true, selectedColumns); $.unblockUI();
+				});
+			}
+
+			function addItemRow(item) {
+				tr = $('<tr></tr>').appendTo($('#tbl-items tbody'));
+
+				tr.append('<td data-order="'+item.fecha+'">'+item.fechaf+'</td>');
+				tr.append('<td>'+item.proveedor+'</td>');
+				tr.append('<td>'+item.descripcion+'</td>');
+				tr.append('<td class="text-right">'+item.valor+'</td>');
+				tr.append('<td class="text-right">'+item.peso+'</td>');
+				tr.append('<td class="text-center">'+item.nota_entrada+'</td>');
+			}
+
+			function cleanTable(tbl) {
+				if($.fn.dataTable.isDataTable('#'+tbl)) {
+					table = $('#'+tbl).DataTable();
+					table.destroy();
+				}
+				$("#nodata").remove();
+			}
+
+			function createTable(tbl, paging, arrColumns=null) {
+				container = $('<div class="form-inline pull-right" style="overflow: visible"></div>');
+				select = $('<select class="selectpicker" multiple data-selected-text-format="static" id="columns-'+tbl+'" title="Mostrar/Ocultar columnas" data-width="fit"></select>').appendTo(container);
+				select.append('<option class="form-control-sm" value="0">Fecha</option>');
+				select.append('<option class="form-control-sm" value="1">Donador</option>');
+				select.append('<option class="form-control-sm" value="2">Producto</option>');
+				select.append('<option class="form-control-sm" value="3">Valor</option>');
+				select.append('<option class="form-control-sm" value="4">Kilogramos</option>');
+				select.append('<option class="form-control-sm" value="5">Nota Entrada</option>');
+				select.selectpicker('val', arrColumns!=null? arrColumns: ['0', '1', '2', '3', '4', '5']);
+				searchContainer = $('<div class="input-group"></div>').appendTo(container);
+				search = $('<input type="text" id="bus" placeholder="Buscar por producto, donador, fecha" class="form-control">').appendTo(searchContainer);
+				icon = $('<div class="input-group-append"></div>').appendTo(searchContainer);
+				icon.append('<button type="button" class="btn btn-secondary btn-sm" id="btn-bus"><i class="fa fa-search"></i></button>');
+
+				$('#'+tbl).dataTable({
+					scrollX: false,
+					paging: paging,
+					pagingType: "full_numbers",
+					dom: 'Rl<"#toolbar-'+tbl+'">frtip',
+					"columnDefs": [
+						{"orderable": true, "targets": [0], "visible": ($.inArray("0", select.val())>=0)},
+						{"orderable": true, "targets": [1], "visible": ($.inArray("1", select.val())>=0)},
+						{"orderable": true, "targets": [2], "visible": ($.inArray("2", select.val())>=0)},
+						{"orderable": true, "targets": [3], "visible": ($.inArray("3", select.val())>=0)},
+						{"orderable": true, "targets": [4], "visible": ($.inArray("4", select.val())>=0)},
+						{"orderable": true, "targets": [5], "visible": ($.inArray("5", select.val())>=0)},
+					],
+					'order': [0, 'desc'],
+					'lengthMenu': [[20,50,100,200],[20,50,100,200]]
+				});
+
+				$('#toolbar-'+tbl).html(container);
+				$('#toolbar-'+tbl+' #bus').keyup(function(e) { $("#"+tbl+"_filter label input").val($.trim($(this).val())).trigger('keyup'); });
+				$("#toolbar-"+tbl+" #bus").on("search", function(evt) { $("#"+tbl+"_filter label input").val(undefined).trigger('keyup'); });
+				$("#toolbar-"+tbl+" #btn-bus").click(function(evt) { evt.preventDefault(); $("#"+tbl+"_filter label input").val($.trim($('#bus').val())).trigger('keyup'); });
+				select.on('changed.bs.select', function(e, index) { blockPage();
+					column = $('#'+tbl).DataTable().column(index);
+					column.visible(!column.visible());
+					$.unblockUI();
+				});
+
+				$("#"+tbl+"_filter label").hide();
+			}
+
+			$('#btnPrint').click(function(){
+				window.open('<?= URL_ROOT ?>/entrada/rpt/print/'+$('#ini').val()+'/'+$('#fin').val()+'/'+$('#clave').val());
+			});
+		});
+		
+	</script>

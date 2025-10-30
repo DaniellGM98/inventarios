@@ -1,0 +1,816 @@
+<?php 
+	include 'header.phtml';
+
+	if($_SESSION['usuario']->tipo == 3) {
+		header('Location: '.URL_ROOT.'/tienda');
+		exit;
+	}
+?>
+	<div class="row page-titles">
+		<div class="col-md-4 align-self-center">
+			<h3 class="text-themecolor"><i class="mdi mdi-cart"></i> <strong>Ventas</strong> Tiendita</h3>
+		</div>
+		<div class="col-md-8 align-self-center">
+			<div class="form-inline pull-right">
+				<!-- <input type="date" class="form-control form-control-sm m-r-10" id="ini" value="<?= date('Y-m-d', strtotime('-5 days')) ?>"> -->
+				<input type="date" class="form-control form-control-sm m-r-10" id="ini" value="<?= date('Y-m-d') ?>">
+				<input type="date" class="form-control form-control-sm m-r-10" id="fin" value="<?= date('Y-m-d') ?>">
+				<select class="form-control form-control-sm" id="cajero">
+					<option value="0">Todos</option>
+				<?php $cajeros = $todo->model->usuario->getCajeros()->result; 
+					foreach($cajeros as $user): ?>
+					<option value="<?= $user->id_usuario ?>"><?= $user->nombre.' '.$user->apellidos ?></option>
+				<?php endforeach; ?>
+				</select>
+				<?php if(in_array(MOD_VENTAS_TIEN_ADD, $permisos)) : ?>
+				<button class="btn btn-success btn-sm m-l-10" id="btnAdd"><i class="mdi mdi-plus"></i> Agregar</button>
+				<?php endif; ?>
+				<?php if($_SESSION['usuario']->tipo == 1 || $_SESSION['usuario']->tipo == 3) : ?>
+				<button class="btn btn-sm btn-secondary m-l-10" id="btnPrintT"><i class="mdi mdi-printer fa-lg"></i> Imprimir Total</button>
+				<button class="btn btn-sm btn-secondary m-l-10" id="btnPrintR"><i class="mdi mdi-printer fa-lg"></i> Imprimir</button>
+				<button class="btn btn-sm btn-secondary m-l-10" id="btnXls"><i class="mdi mdi-file-excel fa-lg"></i> Excel Tickets</button>
+				<button class="btn btn-sm btn-secondary m-l-10" id="btnXlsCaja"><i class="mdi mdi-file-excel fa-lg"></i> Excel</button>
+				<button class="btn btn-sm btn-secondary m-l-10" id="btnTickets"><i class="mdi mdi-receipt fa-lg"></i> Tickets</button>
+				<?php endif; ?>
+			</div>
+		</div>
+	</div>
+	<div class="container-fluid">
+		<div class="row">
+			<div class="col-12">
+				<div class="card">
+					<div class="card-body">
+						<!--div class="table-responsive">
+						</div-->
+						<table id="tbl-items" class="table table-hover table-striped table-sm w-100 mw-100">
+							<thead>
+								<tr>
+									<th>Fecha</th>
+									<th class="text-center">Ticket</th>
+									<th>Cajero</th>
+									<th class="text-center">Prods</th>
+									<th class="text-right">Peso</th>
+									<th class="text-center">Tipo</th>
+									<th class="text-right">Total</th>
+									<th>Credencial</th>
+									<th class="text-center"></th>
+								</tr>
+							</thead>
+							<tbody></tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+		</div>
+		<?php if(in_array(MOD_VENTAS_TIEN_ADD, $permisos) || in_array(MOD_VENTAS_TIEN, $permisos)) : ?>
+		<div id="frm-item" class="modal" data-backdrop="static">
+			<div class="modal-dialog modal-xl">
+				<div class="modal-content d-flex p-2">
+					<div class="modal-header">
+						<h3 class="modal-title"><i class="mdi mdi-cart"></i> Datos de la Venta</h3>
+					</div>
+					<div class="modal-body">
+						<form class="form">
+							<div class="form-group mb-0">
+								<div class="row">
+									<div class="col-sm-3">
+										<label for="item-fecha" class="col-form-label-sm ven-fecha">Fecha</label>
+										<div class="input-group input-group-sm ven-fecha">
+											<div class="input-group-prepend">
+												<span class="input-group-text"><span class="mdi mdi-calendar"></span></span>
+											</div>
+											<input type="text" class="form-control form-control-sm" id="item-fecha" placeholder="Fecha de Venta" readonly>
+										</div>
+									</div>
+									<div class="col-sm-3 cliente">
+										<label for="item-tipo" class="col-form-label-sm">Tipo</label>
+										<div class="input-group input-group-sm">
+											<div class="input-group-prepend">
+												<span class="input-group-text" id="basic-addon1">
+													<i class="mdi mdi-upload"></i>
+												</span>
+											</div>
+											<select class="form-control form-control-sm" id="item-tipo">
+												<option value="1">Venta</option>
+												<option value="2">Merma</option>
+												<option value="3">Trabajadores</option>
+												<option value="4">Donación</option>
+												<option value="5">Comedor</option>
+											</select>
+										</div>
+									</div>
+									<div class="col-sm-3">
+										<label for="item-fk_usuario" class="col-form-label-sm cajero">Cajero</label>
+										<div class="input-group input-group-sm cajero">
+											<div class="input-group-prepend">
+												<span class="input-group-text" id="basic-addon1">
+													<i class="mdi mdi-account"></i>
+												</span>
+											</div>
+											<select class="form-control form-control-sm" id="item-fk_usuario">
+											<option value="0">Seleccione</option>
+											<?php $cajeros = $todo->model->usuario->getCajeros()->result; 
+												foreach($cajeros as $user): ?>
+												<option value="<?= $user->id_usuario ?>"><?= $user->nombre.' '.$user->apellidos ?></option>
+											<?php endforeach; ?>
+											</select>
+										</div>
+									</div>
+									<div class="col-sm-3">
+										<label for="item-beneficiario" class="col-form-label-sm beneficiario">Beneficiario</label>
+										<div class="input-group input-group-sm beneficiario">
+											<div class="input-group-prepend">
+												<span class="input-group-text"><span class="mdi mdi-account-card-details"></span></span>
+											</div>
+											<input type="text" class="form-control form-control-sm" id="item-beneficiario" placeholder="Credencial" readonly>
+										</div>
+									</div>
+								</div>
+							</div>
+							<input type="hidden" id="item-id" value="0">
+						</form>
+						<hr>
+						<table id="tbl-det" class="table table-hover table-striped table-sm w-100 mw-100">
+							<thead>
+								<tr>
+									<th>Código Barras</th>
+									<th>Producto</th>
+									<th>Proveedor</th>
+									<th class="text-center">Cantidad</th>
+									<th class="text-right">Peso</th>
+									<th class="text-right">Importe</th>
+									<th></th>
+								</tr>
+							</thead>
+							<tbody></tbody>
+							<tfoot>
+								<tr>
+									<th colspan="3" class="text-right">TOTALES</th>
+									<th class="text-center tot-dcant"></th>
+									<th class="text-right tot-dpeso"></th>
+									<th class="text-right tot-dimpo"></th>
+									<th></th>
+								</tr>
+								<tr class="table-active">
+									<th class="p-b-10 p-t-10"><input type="text" class="form-control form-control-sm" id="det-codigo_barras" placeholder="Código de barras"></th>
+									<th class="p-b-10 p-t-10"><input type="text" class="form-control form-control-sm" id="det-producto" readonly></th>
+									<th class="p-b-10 p-t-10"><select class="form-control form-control-sm" id="det-fk_proveedor"></th>
+									<th class="p-b-10 p-t-10"><input type="number" class="form-control form-control-sm text-center" id="det-cantidad" placeholder="Cantidad"></th>
+									<th class="p-b-10 p-t-10"><input type="text" class="form-control form-control-sm text-right" id="det-peso" readonly></th>
+									<th class="p-b-10 p-t-10"><input type="text" class="form-control form-control-sm text-right" id="det-importe" readonly></th>
+									<th class="p-b-10 p-t-10">
+										<button type="button" class="btn btn-sm btn-secondary pull-right" id="btnDetAdd"><span class="mdi mdi-plus"></span></button>
+										<input type="hidden" id="det-fk_producto">
+									</th>
+								</tr>
+							</tfoot>
+						</table>
+					</div>
+					<div class="modal-footer justify-content-between">
+						<div class="form-inline">
+							<?php if(in_array(MOD_VENTAS_EDIT_TIPO, $permisos)) : ?>
+							<select class="form-control form-control-sm change-tipo" id="change-tipo">
+								<option value="1">Venta</option>
+								<option value="2">Merma</option>
+								<option value="3">Trabajadores</option>
+								<option value="4">Donación</option>
+								<option value="5">Comedor</option>
+							</select>
+							&nbsp;
+							<button type="button" class="btn btn-info btn-sm change-tipo" id="btnChange"><i class="mdi mdi-check fa-lg"></i> Cambiar tipo</button>	
+							<?php endif; ?>
+						</div>
+						<div>
+							<button type="submit" class="btn btn-inverse waves-effect waves-light" data-dismiss="modal">Cancelar</button>
+							<button type="submit" class="btn btn-info" id="btnPrint"><i class="mdi mdi-receipt fa-lg"></i> Ticket</button>
+							<button type="submit" class="btn btn-success" id="btnSave"><i class="mdi mdi-check fa-lg"></i> Guardar</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<?php endif; ?>
+
+		<div id="frm-tickets" class="modal">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h3 class="modal-title"><i class="mdi mdi-receipt"></i> Resumen de Tickets</h3>
+					</div>
+					<div class="modal-body">
+						<table id="tbl-tickets" class="table table-hover table-striped table-sm w-100 mw-100">
+							<thead>
+								<tr>
+									<th>Cajero</th>
+									<th class="text-center">Tickets</th>
+									<th class="text-center">Cancelados</th>
+									<th class="text-center">Mermas</th>
+								</tr>
+							</thead>
+							<tbody></tbody>
+							<tfoot>
+								<tr>
+									<th class="text-right">TOTALES</th>
+									<th class="text-center">Tickets</th>
+									<th class="text-center">Cancelados</th>
+									<th class="text-center">Mermas</th>
+								</tr>
+							</tfoot>
+						</table>
+					</div>
+					<div class="modal-footer">
+						<button type="submit" class="btn btn-inverse waves-effect waves-light m-r-20" data-dismiss="modal">Aceptar</button>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<?php include 'footer.phtml';?>
+	<script type="text/javascript">
+		$(function() {
+			$apiUrl = '<?= URL_API ?>venta/';
+			$('#mnu-tien').addClass('show');
+			$('#mnu-vent').addClass('active');
+
+			$('#ini, #fin, #cajero').change(function(){ getItems(); });
+
+			<?php if($_SESSION['usuario']->tipo == 4) : ?>
+			$('#cajero').val(<?= $_SESSION['usuario']->id_usuario ?>).prop('disabled', true).hide();
+			<?php endif; ?>
+
+			getItems();
+			function getItems() { 
+				blockPage();
+				selectedColumns = $('#columns-tbl-items').val(); cleanTable('tbl-items'); $('#tbl-items tbody').empty();
+				$.get($apiUrl+'getByDate/'+$('#ini').val()+'/'+$('#fin').val()+'/'+$('#cajero').val(), function(items) { 
+					$.each(items, function(index, item) { addItemRow(item); });
+					createTable('tbl-items', true, selectedColumns); $.unblockUI();
+				});
+			}
+
+			function addItemRow(item) {
+				$('#tbl-items [data-id="'+item.id_venta+'"]').remove();
+				tr = $('<tr data-id="'+item.id_venta+'"></tr>').appendTo($('#tbl-items tbody'));
+				tipo = $('#item-tipo option[value="'+item.tipo+'"]').text();
+
+				tr.append('<td class="text-left" data-order="'+item.fecha+'"><small class="fecha">'+item.fechaf+'</small></td>');
+				tr.append('<td class="text-center"><small class="id_venta">'+item.id_venta+'</small></td>');
+				tr.append('<td class="text-left"><small class="username">'+item.username+'</small></td>');
+				tr.append('<td class="text-center"><small class="num_prod">'+item.num_prod+'</small></td>');
+				tr.append('<td class="text-right"><small class="peso_total">'+item.peso_total+'</small></td>');
+				tr.append('<td class="text-center"><small class="tipo">'+tipo+'</small></td>');
+				tr.append('<td class="text-right"><small class="total">'+item.total+'</small></td>');
+				tr.append('<td class="text-left"><small class="beneficiario">'+item.beneficiario+'</small></td>');
+
+				tda = $('<td class="text-center"></td>');
+				<?php if(in_array(MOD_VENTAS_TIEN, $permisos)) : ?> tda.append('<a href="#" data-popup="tooltip" title="Ver" class="btnEdit text-primary"><i class="mdi mdi-eye fa-lg"></i></a> ');  <?php endif; ?>
+				tda.append('<a href="<?= URL_ROOT ?>/venta/ticket/'+item.id_venta+'" data-popup="tooltip" title="Ticket" class="text-primary" target="_blank"><i class="mdi mdi-receipt fa-lg"></i></a> ');
+				<?php if(in_array(MOD_VENTAS_TIEN_DEL, $permisos)) : ?> tda.append('<a href="#" data-popup="tooltip" title="Cancelar" class="btnDel"><i class="mdi mdi-delete fa-lg" style="color:red;"></i></a>'); <?php endif; ?>
+				tr.append(tda);
+			}
+
+			<?php if(in_array(MOD_VENTAS_TIEN_ADD, $permisos)) : ?>
+			$('#btnAdd').click(function(e) { e.preventDefault();
+				clearData();
+				$('#item-tipo').trigger('change');
+				$('#frm-item').modal('show');
+				$('#item-beneficiario').focus();
+			});
+
+			$('#item-tipo').change(function(){
+				$('.beneficiario, .cajero').addClass('hide');
+				if($('#item-tipo').val() != 3){
+					<?php if($_SESSION['usuario']->tipo == 4) : ?>
+					$('#item-fk_usuario').val(<?= $_SESSION['usuario']->id_usuario ?>).prop('disabled', true);
+					<?php else : ?>
+					$('#item-fk_usuario').val(0).prop('disabled', false);
+					$('.cajero').removeClass('hide');
+					<?php endif; ?>
+				}
+				if($('#item-tipo').val() == 1){
+					$('.beneficiario').removeClass('hide');
+				}
+				showDet();
+			});
+
+			$('#item-fk_usuario').change(function(){ showDet(); });
+
+			$('#item-beneficiario').change(function(){ buscaBeneficiario(); });
+			$('#item-beneficiario').keyup(function(e){ if(e.keyCode == 13 && $.trim($('#item-beneficiario').val())) buscaBeneficiario(); });
+
+			function showDet(){
+				show = false;
+				if($('#item-tipo').val() == 3) show = true; else show = false;
+				if($('#item-tipo').val() != 3 && $('#item-fk_usuario').val() > 0) show = true; else show = false;
+				if($('#item-tipo').val() == 1 && $('#item-beneficiario').hasClass('is-valid')) show = true; else show = false;
+				if(show){
+					$('#tbl-det').slideDown();
+					$('#det-codigo_barras').focus();
+				} 
+			}
+
+			function clearData() {
+				$('.invalid-tooltip').remove();
+				$('#frm-item input').val('');
+				$('#item-id').val(0);
+				$('#item-tipo').val(1);
+				$('#tbl-det tbody').empty();
+				
+				$('.ven-fecha, #btnPrint').addClass('hide');
+				$('.change-tipo').addClass('d-none');
+				$('#frm-item input').prop('readonly', false);
+				$('#det-producto, #det-peso, #det-importe').prop('readonly', true);
+				$('#frm-item select, #btnSave').prop('disabled', false);
+				$('#btnSave').removeClass('hide');
+				$('#tbl-det tfoot tr:eq(1)').removeClass('hide');
+				$('#tbl-det .tot-dcant').html('');
+				$('#tbl-det .tot-dpeso').html('');
+				$('#tbl-det .tot-dimpo').html('');
+
+				<?php if($_SESSION['usuario']->tipo == 4) : ?>
+				$('#item-fk_usuario').val(<?= $_SESSION['usuario']->id_usuario ?>).prop('disabled', true);
+				$('#item-tipo').prop('disabled', true);
+				<?php else : ?>
+				$('#item-fk_usuario').val(0).prop('disabled', false);
+				<?php endif; ?>
+
+				$('#item-beneficiario, #det-codigo_barras').removeClass('is-valid').removeClass('is-invalid');
+				$('.valid-tooltip, .invalid-tooltip').remove();
+
+				$('#tbl-det').slideUp();
+			}
+
+			function buscaBeneficiario(){
+				cred = $.trim($('#item-beneficiario').val());
+				$('#item-beneficiario').removeClass('is-valid').removeClass('is-invalid');
+				$('.valid-tooltip, .invalid-tooltip').remove();
+				if(cred != '' /* && $('#item-id').val() == 0 */){
+					blockPage();
+					$.get($apiUrl+"getBeneficiario/"+cred, 
+						function (resp) {
+							if(resp.response){
+								$('#item-beneficiario').addClass('is-valid');
+								$('#item-beneficiario').after('<div class="valid-tooltip">'+resp.result.titular+'</div>');
+							}else{
+								$('#item-beneficiario').addClass('is-invalid');
+								$('#item-beneficiario').after('<div class="invalid-tooltip">Beneficiario no existe</div>');
+							}
+							showDet();
+							$.unblockUI();
+						},
+						"json"
+					);
+				}else{
+					showDet();
+				}
+			}
+			<?php endif; ?>
+
+			<?php if(in_array(MOD_VENTAS_TIEN, $permisos)) : ?>
+			$('tbody').on('click', '.btnEdit', function(event) { event.preventDefault(); blockPage();
+				clearData();
+				$('#frm-item .validation-error-label').remove();
+				id = $(this).parents('tr').data('id');
+				
+				$.get($apiUrl+'get/'+id, function(item) { 
+					$('#item-id').val(item.result.id_venta);
+					$.each(item.result, function(index, val) { $('#item-'+index).val(val).trigger('change'); });
+					$('#item-fk_usuario').val(item.result.fk_usuario);
+					clearEdit();
+					$.each(item.detalles, function (index, det) {  addDetRow(det); });
+					if(item.detalles.length == 1) $('.btnDelDetNvo').remove();
+					$('#frm-item').modal('show');
+					$.unblockUI();
+				});
+			});
+
+			function clearEdit(){
+				$('#frm-item input').prop('readonly', true);
+				$('#frm-item select, #btnSave').prop('disabled', true);
+				$('#btnSave').addClass('hide');
+				$('.ven-fecha, #btnPrint, .change-tipo').removeClass('hide');
+				$('#tbl-det tfoot tr:eq(1)').addClass('hide');
+				$('.change-tipo').removeClass('d-none');
+				$('#change-tipo').prop('disabled', false);
+				$('#tbl-det').slideDown();
+			}
+			<?php endif; ?>
+
+			<?php if(in_array(MOD_VENTAS_TIEN_DEL, $permisos)) : ?>
+			$('tbody').on('click', '.btnDel', function(event) { event.preventDefault(); 
+				id = $(this).parents('tr').data('id');
+				trp = $('#tbl-items tr[data-id="'+id+'"]');
+				ticket = trp.find('td:eq(1)').text();
+				fecha = trp.find('td:eq(0)').text();
+				swal({ title:"Cancelar venta", text:"¿Desea cancelar la venta No <strong>"+ticket+" del "+fecha+"</strong>?", type:"warning", html:true, showCancelButton:true, cancelButtonText:"No", confirmButtonColor:"#DD6B55", confirmButtonText:"Si, cancelar", closeOnConfirm:false  }, 
+					function(resp) {
+						blockPage();
+						if(resp) {
+							$.ajax({ url:$apiUrl+'cancel/'+id, type:'PUT', dataType:'json',
+								success: function(resp) {
+									if(resp.response) {
+										trp.remove();
+										swal({ type:"success", title:"¡Listo!", text:"Se cancelo la venta", timer:4000 });
+									}else if(resp.sesion == 0){
+										window.location.href = '<?= URL_ROOT ?>/usuario/logout';
+									} else { swal({ type:"warning", title:"Oops!", text:resp.message, timer:4000 });  }
+									$.unblockUI();
+								}
+							});
+						} else { $.unblockUI(); }
+					}
+				);
+			});
+			<?php endif; ?>
+			
+			<?php if(in_array(MOD_VENTAS_TIEN_DEL, $permisos)) : ?>
+			$('#btnChange').click(function(){
+				if($('#item-tipo').val() != $('#change-tipo').val()){
+					swal({ title:"Cambiar tipo", text:"¿Desea cambiar el tipo de salida?", type:"warning", html:true, showCancelButton:true, cancelButtonText:"No", confirmButtonColor:"#DD6B55", confirmButtonText:"Si, cambiar", closeOnConfirm:false  }, 
+						function(resp) {
+							blockPage();
+							if(resp) {
+								$.post($apiUrl+"editTipo/"+$('#item-id').val(), {tipo: $('#change-tipo').val()},
+									function (resp) {
+										if(resp.response) {
+											getItems();
+											$('#item-id').val(0);
+											$('#frm-item').modal('hide');
+											swal({ type:"success", title:"¡Listo!", text:"Se cambio el tipo", timer:4000 });
+										} else { swal({ type:"warning", title:"Oops!", text:resp.message, timer:4000 });  }
+										$.unblockUI();
+									},
+									"json"
+								);
+							} else { $.unblockUI(); }
+						}
+					);
+				}
+			});
+			<?php endif; ?>
+
+			<?php if(in_array(MOD_VENTAS_TIEN_ADD, $permisos) || in_array(MOD_VENTAS_TIEN, $permisos)) : ?>
+			// $('#frm-item').on('shown.bs.modal', function () { $('#item-codigo_barras').focus(); });
+
+			$('#btnSave').click(function() {
+				$('.invalid-tooltip').remove();
+				id = parseInt($('#item-id').val());
+				data = { fk_usuario: $('#item-fk_usuario').val(),
+						tipo: $('#item-tipo').val(),
+						beneficiario: $('#item-beneficiario').val(),
+						peso_total: $('.tot-dpeso').text(), 
+						total: $('.tot-dimpo').text() };
+				detalles = [];
+				$.each($('#tbl-det tbody tr'), function (index, elem) { 
+					det = {
+						id_producto: $(elem).data('prod'), 
+						// cantidad: $(elem).find('td:eq(3)').text(), 
+						cantidad: $(elem).find('.cant-inline').val(), 
+						peso: $(elem).find('td:eq(4)').text(),  
+						importe: $(elem).find('td:eq(5)').text(), 
+					};
+					detalles.push(det);
+				});
+				data.detalles = detalles;
+
+				$errLabel = $('<div class="invalid-tooltip"></div>');
+				if(data.tipo == -1) {
+					$errLabel.html('Debe seleccionar cliente');
+					$('#item-tipo').focus().after($errLabel);
+					$errLabel.show();
+				}else if(data.tipo!= 3 && data.fk_usuario == 0) {
+					$errLabel.html('Debe seleccionar cajero');
+					$('#item-fk_usuario').focus().after($errLabel);
+					$errLabel.show();
+				} else if(detalles.length == 0) {
+					$errLabel.html('Debe agregar productos a la venta');
+					$('#tbl-det').after($errLabel);
+					$errLabel.show();
+				} else {
+					blockPage();
+					if(id == 0) {
+						data.status = 1;
+						$.post($apiUrl+'add/', data, function(resp) {
+							if(resp.response) {
+								getItems();
+								$('#item-id').val(0);
+								$('#frm-item').modal('hide');
+								swal({ type: "success", title: "¡Listo!", text: "Se guardaron los datos correctamente.", timer: 4000 });
+								window.open('<?= URL_ROOT ?>/venta/ticket/'+resp.result);
+							}else if(resp.sesion == 0){
+								window.location.href = '<?= URL_ROOT ?>/usuario/logout';
+							} else { swal({ type: "warning", title: "Oops!", text: resp.message, timer: 4000 }); }
+							$.unblockUI();
+						},'json');
+					} else {
+						$.ajax({ url:$apiUrl+'edit/'+id, type:'PUT', dataType:'json', data:data, }).done(
+							function(resp) {
+								if(resp.response) {
+									$('#tbl-items').DataTable().draw();
+									$('#item-id').val(0);
+									$('#frm-item').modal('hide');
+									swal({ type: "success", title: "¡Listo!", text: "Se guardaron los datos correctamente.", timer: 4000 });
+								} else { swal({ type: "warning", title: "Oops!", text: resp.message, timer: 4000 }); }
+								$.unblockUI();
+							}
+						);
+					}
+				}
+			});
+			<?php endif; ?>
+
+			function cleanTable(tbl) {
+				if($.fn.dataTable.isDataTable('#'+tbl)) {
+					table = $('#'+tbl).DataTable();
+					table.destroy();
+				}
+				$("#nodata").remove();
+			}
+
+			function createTable(tbl, paging, arrColumns=null) {
+				container = $('<div class="form-inline pull-right" style="overflow: visible"></div>');
+				select = $('<select class="selectpicker" multiple data-selected-text-format="static" id="columns-'+tbl+'" title="Mostrar/Ocultar columnas" data-width="fit"></select>').appendTo(container);
+				select.append('<option class="form-control-sm" value="0">Fecha</option>');
+				select.append('<option class="form-control-sm" value="1">Ticket</option>');
+				select.append('<option class="form-control-sm" value="2">Cajero</option>');
+				select.append('<option class="form-control-sm" value="3">Productos</option>');
+				select.append('<option class="form-control-sm" value="4">Peso Total</option>');
+				select.append('<option class="form-control-sm" value="5">Tipo</option>');
+				select.append('<option class="form-control-sm" value="6">Total</option>');
+				select.append('<option class="form-control-sm" value="7">Credencial</option>');
+				select.selectpicker('val', arrColumns!=null? arrColumns: ['0', '1', '2', '3', '4', '5', '6', '7']);
+				searchContainer = $('<div class="input-group"></div>').appendTo(container);
+				search = $('<input type="text" id="bus" placeholder="Buscar por cliente, fecha" class="form-control">').appendTo(searchContainer);
+				icon = $('<div class="input-group-append"></div>').appendTo(searchContainer);
+				icon.append('<button type="button" class="btn btn-secondary btn-sm" id="btn-bus"><i class="fa fa-search"></i></button>');
+
+				$('#'+tbl).dataTable({
+					// scrollY: false,
+					scrollX: false,
+					paging: paging,
+					pagingType: "full_numbers",
+					dom: 'Rl<"#toolbar-'+tbl+'">frtip',
+					"columnDefs": [
+						{"orderable": true, "targets": [0], "visible": ($.inArray("0", select.val())>=0)},
+						{"orderable": true, "targets": [1], "visible": ($.inArray("1", select.val())>=0)},
+						{"orderable": true, "targets": [2], "visible": ($.inArray("2", select.val())>=0)},
+						{"orderable": true, "targets": [3], "visible": ($.inArray("3", select.val())>=0)},
+						{"orderable": true, "targets": [4], "visible": ($.inArray("4", select.val())>=0)},
+						{"orderable": true, "targets": [5], "visible": ($.inArray("5", select.val())>=0)},
+						{"orderable": true, "targets": [6], "visible": ($.inArray("6", select.val())>=0)},
+						{"orderable": true, "targets": [7], "visible": ($.inArray("7", select.val())>=0)},
+						{"orderable": false, "targets": [8]},
+					],
+					'order': [0, 'desc'],
+					'lengthMenu': [[20,50,100,200],[20,50,100,200]]
+				});
+
+				$('#toolbar-'+tbl).html(container);
+				$('#toolbar-'+tbl+' #bus').keyup(function(e) { $("#"+tbl+"_filter label input").val($.trim($(this).val())).trigger('keyup'); });
+				$("#toolbar-"+tbl+" #bus").on("search", function(evt) { $("#"+tbl+"_filter label input").val(undefined).trigger('keyup'); });
+				$("#toolbar-"+tbl+" #btn-bus").click(function(evt) { evt.preventDefault(); $("#"+tbl+"_filter label input").val($.trim($('#bus').val())).trigger('keyup'); });
+				select.on('changed.bs.select', function(e, index) { blockPage();
+					column = $('#'+tbl).DataTable().column(index);
+					column.visible(!column.visible());
+					$.unblockUI();
+				});
+
+				$("#"+tbl+"_filter label").hide();
+			}
+
+
+
+			$('#det-codigo_barras').change(function(){
+				cod = $.trim($(this).val());
+				cajero = $('#item-fk_usuario').val();
+				$('.invalid-tooltip').remove();
+				if(cajero == 0){
+					$errLabel = $('<div class="invalid-tooltip"></div>');
+					$errLabel.html('Debe seleccionar cajero');
+					$('#item-fk_usuario').focus().after($errLabel);
+					$errLabel.show();
+					return;
+				}else{
+					if(cod != ''){
+						if($('#item-fk_usuario').val() != 0){
+							$('#det-fk_proveedor').empty();
+							blockPage();
+							//$.get($apiUrl.replace('venta','producto')+"getByCajero/"+cajero+"/"+cod, 
+							$.get('<?= URL_API ?>producto/'+"getByCajero/"+cajero+"/"+cod, 
+								function (resp) {
+									if(resp.result.length){
+										$.each(resp.result, function (index, prod) { 
+											$('#det-fk_proveedor').append('<option value="'+prod.fk_proveedor+'" data-desc="'+prod.descripcion+'" data-peso="'+prod.peso+'" data-precio="'+prod.precio+'" data-prod="'+prod.id_producto+'" data-stock="'+prod.stock_cajero+'">'+prod.proveedor+'</option>');
+										});
+										$('#det-fk_proveedor').val(resp.result[0].fk_proveedor).trigger('change');
+										$('#det-codigo_barras').removeClass('is-invalid').addClass('is-valid');
+									}else{
+										clearNvoDet();
+										$('#det-codigo_barras').removeClass('is-valid').addClass('is-invalid');
+									}
+									$.unblockUI();
+								},
+								"json"
+							);
+						}
+					}
+				}
+			});
+
+			$('#det-fk_proveedor').change(function(){
+				prod = $('#det-fk_proveedor option:selected').data('prod');
+				desc = $('#det-fk_proveedor option:selected').data('desc');
+				peso = $('#det-fk_proveedor option:selected').data('peso');
+				precio = $('#det-fk_proveedor option:selected').data('precio');
+				$('#det-fk_producto').val(prod);
+				$('#det-producto').val(desc)
+				$('#det-cantidad').data('peso',peso);
+				$('#det-cantidad').data('precio',precio);
+				$('#det-cantidad').val(1).trigger('change').focus();
+				$('#btnDetAdd').trigger('click');
+			});
+
+			$('#det-cantidad').change(function(){
+				cant = parseFloat($.trim($(this).val()));
+				peso = cant * parseFloat($.trim($(this).data('peso')));
+				impo = cant * parseFloat($.trim($(this).data('precio')));
+				$('#det-peso').val(peso.toFixed(3));
+				$('#det-importe').val(impo.toFixed(2));
+			});
+
+			$('#det-cantidad').keyup(function(e){
+				if(e.keyCode == 13 && $('#det-peso').val() > 0){
+					det = {};
+					$.each($('#tbl-det input:not(".cant-inline")'), function (index, elem) { 
+						ide = $(elem).attr('id').replace('det-','');
+						det[ide] = $.trim($(elem).val());
+					});
+					det.proveedor = $('#det-fk_proveedor option:selected').text();
+					det.stock = $('#det-fk_proveedor option:selected').data('stock');
+					det.pesou = $('#det-cantidad').data('peso');
+					det.precio = $('#det-cantidad').data('precio');
+					if(det.cantidad > $('#det-fk_proveedor option:selected').data('stock')){
+						swal({ type:"warning", title:"Oops!", text: 'No hay suficiente stock', timer:4000 });
+					}else{
+						addDetRow(det, false);
+					}
+				}
+			});
+
+			$('#btnDetAdd').click(function(){
+				if($('#det-peso').val() > 0){
+					det = {};
+					$.each($('#tbl-det input:not(".cant-inline")'), function (index, elem) { 
+						ide = $(elem).attr('id').replace('det-','');
+						det[ide] = $.trim($(elem).val());
+					});
+					det.proveedor = $('#det-fk_proveedor option:selected').text();
+					det.stock = $('#det-fk_proveedor option:selected').data('stock');
+					det.pesou = $('#det-cantidad').data('peso');
+					det.precio = $('#det-cantidad').data('precio');
+					if(det.cantidad > $('#det-fk_proveedor option:selected').data('stock')){
+						swal({ type:"warning", title:"Oops!", text: 'No hay suficiente stock', timer:4000 });
+					}else{
+						addDetRow(det, false);
+					}
+				}
+			});
+
+			function addDetRow(det, edit=true){
+				cant = parseInt(det.cantidad); peso = parseFloat(det.peso); imp = parseFloat(det.importe);
+				if($('#tbl-det tbody tr[data-prod="'+det.fk_producto+'"]').length > 0){
+					tr = $('#tbl-det tbody tr[data-prod="'+det.fk_producto+'"]');
+					//cant += parseInt(tr.find('td:eq(3)').text());
+					cant += parseInt(tr.find('.cant-inline').val());
+					peso += parseFloat(tr.find('td:eq(4)').text());
+					imp += parseFloat(tr.find('td:eq(5)').text());
+					tr.empty();
+				}else{
+					tr = $('<tr data-prod="'+det.fk_producto+'" data-id="'+det.id_det_venta+'"></tr>');
+				}
+				tr.append('<td>'+det.codigo_barras.toUpperCase()+'</td>');
+				tr.append('<td>'+det.producto+'</td>');
+				tr.append('<td><small>'+det.proveedor+'</small></td>');
+				cant = cant;
+				<?php if(in_array(MOD_VENTAS_TIEN_ADD, $permisos)) : ?>
+				if(!edit){
+					cant = '<input type="number" class="form-control form-control-sm text-center cant-inline" placeholder="Cantidad" value="'+cant+'" data-stock="'+det.stock+'" max="'+det.stock+'" data-peso="'+det.pesou+'" data-precio="'+det.precio+'">';
+				}
+				<?php endif; ?>
+				tr.append('<td class="text-center">'+cant+'</td>');
+				tr.append('<td class="text-right">'+peso.toFixed(3)+'</td>');
+				tr.append('<td class="text-right">'+imp.toFixed(2)+'</td>');
+				tr.append('<td class="text-center"><a href="#" data-popup="tooltip" title="Eliminar" class="btnDelDetNvo text-danger"><i class="mdi mdi-close fa-lg"></i></a></td>');
+				$('#tbl-det tbody').append(tr);
+				$('#frm-item').animate({ scrollTop: $("#btnSave").offset().top }, 500);
+				calcTotNva(edit);
+				clearNvoDet();
+			}
+
+			$('#tbl-det').on('change', '.cant-inline', function(){
+				cant = parseFloat($.trim($(this).val()));
+				peso = cant * parseFloat($.trim($(this).data('peso')));
+				impo = cant * parseFloat($.trim($(this).data('precio')));
+				$(this).parents('tr').find('td:eq(4)').text(peso.toFixed(3));
+				$(this).parents('tr').find('td:eq(5)').text(impo.toFixed(2));
+				calcTotNva();
+			});
+
+			function calcTotNva(edit=false){
+				cant = 0; peso = 0; impo = 0;
+				$.each($('#tbl-det tbody tr'), function (index, elem) { 
+					if(edit) cant += parseFloat($(elem).find('td:eq(3)').text());
+					else cant += parseFloat($(elem).find('.cant-inline').val());
+					peso += parseFloat($(elem).find('td:eq(4)').text());
+					impo += parseFloat($(elem).find('td:eq(5)').text());
+				});
+
+				$('#tbl-det .tot-dcant').html(cant);
+				$('#tbl-det .tot-dpeso').html(peso.toFixed(3));
+				$('#tbl-det .tot-dimpo').html(impo.toFixed(2));
+			}
+
+			function clearNvoDet(){
+				$('#tbl-det input:not(".cant-inline")').val('');
+				$('#det-fk_proveedor').empty();
+				$('#det-codigo_barras').focus()
+			}
+
+			$('body').on('click', '.btnDelDetNvo', function(e){
+				trp = $(e.target).parents('tr');
+				if(trp.data('id') > 0){
+					id = trp.data('id');
+					prod = trp.find('td:eq(1)').text();
+					swal({ title:"Eliminar detalle venta", text:"¿Desea eliminar el producto <strong>"+prod+" de la venta?", type:"warning", html:true, showCancelButton:true, cancelButtonText:"No", confirmButtonColor:"#DD6B55", confirmButtonText:"Si, eliminar", closeOnConfirm:false  }, 
+						function(resp) {
+							blockPage();
+							if(resp) {
+								$.ajax({ url:$apiUrl+'delDetalleVenta/'+id, type:'PUT', dataType:'json',
+									success: function(resp) {
+										if(resp.response) {
+											trp.remove();
+											calcTotNva();
+											swal({ type:"success", title:"¡Listo!", text:"Se eliminó el producto de la venta", timer:4000 });
+										}else if(resp.sesion == 0){
+											window.location.href = '<?= URL_ROOT ?>/usuario/logout';
+										} else { swal({ type:"warning", title:"Oops!", text:resp.message, timer:4000 });  }
+										$.unblockUI();
+									}
+								});
+							} else { $.unblockUI(); }
+						}
+					);
+				}else{
+					trp.remove();
+					calcTotNva();
+				}
+			});
+
+			$('#btnPrint').click(function(){
+				window.open('<?= URL_ROOT ?>/venta/ticket/'+$('#item-id').val());
+			});
+
+			<?php if($_SESSION['usuario']->tipo == 1 || $_SESSION['usuario']->tipo == 3) : ?>
+			$('#btnPrintR').click(function(){
+				window.open('<?= URL_ROOT ?>/venta/rptVentasTickets/print/'+$('#ini').val()+'/'+$('#fin').val());
+			});
+
+			$('#btnPrintT').click(function(){
+				window.open('<?= URL_ROOT ?>/venta/rptVentasTotales/print/'+$('#ini').val()+'/'+$('#fin').val());
+			});
+
+			$('#btnXls').click(function(){
+				window.open('<?= URL_ROOT ?>/venta/getByDate/xlsx/'+$('#ini').val()+'/'+$('#fin').val()+'/');
+			});
+
+			$('#btnXlsCaja').click(function(){
+				window.open('<?= URL_ROOT ?>/venta/rptVentasCajero/xlsx/'+$('#ini').val()+'/'+$('#fin').val());
+			});
+
+			$('#btnTickets').click(function(){
+				blockPage();
+				$('#tbl-tickets tbody').empty();
+				$('#tbl-tickets tfoot th:not(":first")').html('');
+				$.get($apiUrl+"getTickets/"+$('#ini').val()+'/'+$('#fin').val()+'/0', 
+					function (data) {
+						$.each(data.result, function (index, item) { 
+							 tr = $('<tr></tr>');
+							 tr.append('<td>'+item.nomcom+'</td>');
+							 tr.append('<td class="text-center">'+item.tickets+'</td>');
+							 tr.append('<td class="text-center">'+item.cancelados+'</td>');
+							 tr.append('<td class="text-center">'+item.mermas+'</td>');
+							 $('#tbl-tickets tbody').append(tr);
+						});
+						$('#tbl-tickets tfoot th:eq(1)').html(data.tickets);
+						$('#tbl-tickets tfoot th:eq(2)').html(data.cancelados);
+						$('#tbl-tickets tfoot th:eq(3)').html(data.mermas);
+						$('#frm-tickets').modal('show');
+						$.unblockUI();
+					},
+					"json"
+				);
+			});
+			<?php endif ?>
+		});
+		
+	</script>

@@ -1,0 +1,50 @@
+<?php 
+	include 'header.phtml';
+
+	if($_SESSION['usuario']->tipo == 3) {
+		header('Location: '.URL_ROOT.'/tienda');
+		exit;
+	}
+
+    $acciones = $_SESSION['permisos'][array_search('/tiendita', array_column($_SESSION['permisos'], 'url'))]->acciones;
+    $menus = array();
+    $rpt = '';
+    foreach ($acciones as $m) {
+        $urlMod = SITE_ROOT.$m->url;
+        if(strpos($m->nombre, 'Reporte ') !== false && $rpt == '') $rpt = $urlMod;
+        if($m->url != '' && strpos($m->nombre, 'Reporte ') === false){
+            $menus[] = array('nombre' => str_replace('Ver ','',$m->nombre), 'icono' => $m->icono, 'url' => $urlMod);
+        }
+    }
+    if($rpt != '') $menus[] = array('nombre' => 'Reportes', 'icono' => 'mdi mdi-chart-areaspline', 'url' => $rpt);
+?>
+	<div class="container-fluid">
+		<div class="row p-t-30">
+            <div class="col-sm-12">
+                <h1 class="d-inline"><i class="mdi mdi-cart"></i> Tiendita</h1>
+                <hr>
+            </div>
+		</div>
+
+        <div class="row">
+            <?php foreach ($menus as $m) : ?>
+            <div class="col-sm-2">
+                <a href="<?= $m['url'] ?>">
+                    <div class="card text-center shadow-lg bg-warning bancomnu">
+                        <div class="card-body">
+                            <i class="<?= $m['icono'] ?> fa-5x text-white"></i>
+                            <h3 class="display-6"><?= $m['nombre'] ?></h3>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <?php endforeach; ?>
+        </div>
+	</div>
+	<?php include 'footer.phtml';?>
+	<script type="text/javascript">
+		$(function() {
+			$('#mnu-tien').addClass('show');
+		});
+		
+	</script>
