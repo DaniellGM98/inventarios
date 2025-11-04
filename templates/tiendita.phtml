@@ -1,11 +1,6 @@
 <?php 
 	include 'header.phtml';
 
-	if($_SESSION['usuario']->tipo == 3) {
-		header('Location: '.URL_ROOT.'/tienda');
-		exit;
-	}
-
     $acciones = $_SESSION['permisos'][array_search('/tiendita', array_column($_SESSION['permisos'], 'url'))]->acciones;
     $menus = array();
     $rpt = '';
