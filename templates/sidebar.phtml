@@ -45,9 +45,16 @@
 				<li class="nav-devider"></li>
 				<?php endif; ?>
 				
-				<li class="nav-small-cap">ADMINISTRADOR</li>
 				<?php
 					$menu = $_SESSION['permisos'];
+					foreach ($menu as $m) {
+						if (isset($m->id) && in_array($m->id, [1, 2, 3, 4])) {
+				?>	
+					<li class="nav-small-cap">ADMINISTRADOR</li>
+				<?php
+							break;
+						}
+					}
 					foreach ($menu as $m) {
 						$urlMod = '#';
 						if($m->accionesUrl == 0){
